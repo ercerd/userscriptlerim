@@ -1,5 +1,5 @@
 // ==UserScript==
-    // @name         faturaislemleri
+    // @name         Konat Fatura İşlemleri
     // @namespace    http://tampermonkey.net/
     // @version      1.2
     // @description  İşlemdeki belgeler sayfasındaki PDF'leri indirir ve faturaları onaylar
