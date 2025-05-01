@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         combinedonbildirim
+// @name         Önbildirim GGBS için kullanıcı betiğim
 // @version      2.1
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
