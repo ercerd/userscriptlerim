@@ -1,7 +1,7 @@
-// ==UserScript==
+    // ==UserScript==
     // @name         Konat Fatura İşlemleri
     // @namespace    http://tampermonkey.net/
-    // @version      1.2
+    // @version      1.3
     // @description  İşlemdeki belgeler sayfasındaki PDF'leri indirir ve faturaları onaylar
     // @author       Your Name
     // @match        https://konat.net.tr/dss33/v33/index.php?tpage=islemdeki-belgeler*
@@ -50,6 +50,10 @@
                 background-color: #2196F3;
             }
 
+            #stopApproveButton {
+                background-color: #FFC107;
+            }
+
             .status-text {
                 padding: 8px 15px;
                 background-color: rgba(255, 255, 255, 0.9);
@@ -81,6 +85,12 @@
         autoApproveButton.className = 'action-button';
         autoApproveButton.textContent = 'Otomatik Onayla';
 
+        const stopApproveButton = document.createElement('button');
+        stopApproveButton.id = 'stopApproveButton';
+        stopApproveButton.className = 'action-button';
+        stopApproveButton.textContent = 'Onaylamayı Durdur';
+        stopApproveButton.disabled = true;
+
         const downloadStatus = document.createElement('div');
         downloadStatus.id = 'downloadStatus';
         downloadStatus.className = 'status-text';
@@ -94,6 +104,7 @@
         customTopBar.appendChild(downloadButton);
         customTopBar.appendChild(pauseButton);
         customTopBar.appendChild(autoApproveButton);
+        customTopBar.appendChild(stopApproveButton);
         customTopBar.appendChild(downloadStatus);
         customTopBar.appendChild(approveStatus);
 
@@ -188,6 +199,7 @@
                     approveStatus.textContent = 'Tüm onaylamalar tamamlandı!';
                     setProcessing(false);
                     autoApproveButton.disabled = false;
+                    stopApproveButton.disabled = true;
                     return;
                 }
 
@@ -199,6 +211,7 @@
                 approveStatus.textContent = 'Bir hata oluştu!';
                 setProcessing(false);
                 autoApproveButton.disabled = false;
+                stopApproveButton.disabled = true;
             }
         }
 
@@ -243,8 +256,16 @@
                 }
                 setProcessing(true);
                 autoApproveButton.disabled = true;
+                stopApproveButton.disabled = false;
                 processApproval();
             }
+        });
+
+        stopApproveButton.addEventListener('click', () => {
+            setProcessing(false);
+            stopApproveButton.disabled = true;
+            autoApproveButton.disabled = false;
+            approveStatus.textContent = 'Onaylama Durduruldu!';
         });
 
         window.addEventListener('load', () => {
@@ -255,6 +276,7 @@
             if (isProcessing()) {
                 setTimeout(() => {
                     autoApproveButton.disabled = true;
+                    stopApproveButton.disabled = false;
                     processApproval();
                 }, 1000);
             }
@@ -267,6 +289,7 @@
 
             if (isProcessing()) {
                 autoApproveButton.disabled = true;
+                stopApproveButton.disabled = false;
                 processApproval();
             }
         }
