@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        karantina
 // @namespace   violentmonkey
-// @version     2.42
+// @version     2.43
 // @description Karantina BSS Uygunluk Sorgulama Sayfasına Sık Kullanılan Kapıların Sayı Başlangıçlarını Ekleme
 // @match       https://tbsapp.tarbil.gov.tr/Reports/ReportViewDynamic.aspx?report=*
 // @grant       none
