@@ -5,8 +5,8 @@
 // @description Karantina BSS Uygunluk Sorgulama Sayfasına Sık Kullanılan Kapıların Sayı Başlangıçlarını Ekleme
 // @match       https://tbsapp.tarbil.gov.tr/Reports/ReportViewDynamic.aspx?report=*
 // @grant       none
-// @updateURL   https://raw.githubusercontent.com/ercerd/tbskarantina/main/karantina-sorgulama-dropdown.user.js
-// @downloadURL https://raw.githubusercontent.com/ercerd/tbskarantina/main/karantina-sorgulama-dropdown.user.js
+// @updateURL   https://raw.githubusercontent.com/ercerd/userscriptlerim/master/karantina.user.js
+// @downloadURL https://raw.githubusercontent.com/ercerd/userscriptlerim/master/karantina.user.js
 // ==/UserScript==
 
 (function() {
