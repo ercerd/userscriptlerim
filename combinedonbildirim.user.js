@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.1
+// @version      2.3
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -166,6 +166,94 @@
         buttonContainer.appendChild(resetButton);
 
         resetButton.addEventListener('click', resetFormFields);
+
+        // --- ID Kopyala Butonları (Dinamik) ---
+        const copyContainer = document.createElement('div');
+        copyContainer.style.marginTop = '15px';
+        copyContainer.style.border = '1px solid #ccc';
+        copyContainer.style.padding = '5px';
+        copyContainer.style.borderRadius = '5px';
+        buttonContainer.appendChild(copyContainer);
+
+        const mainCopyButton = document.createElement('button');
+        mainCopyButton.innerText = 'ID Kopyala';
+        mainCopyButton.style.padding = '10px 20px';
+        mainCopyButton.style.backgroundColor = '#ffc107';
+        mainCopyButton.style.color = 'black';
+        mainCopyButton.style.border = 'none';
+        mainCopyButton.style.borderRadius = '5px';
+        mainCopyButton.style.width = '100%';
+        copyContainer.appendChild(mainCopyButton);
+
+        const numberContainer = document.createElement('div');
+        numberContainer.style.display = 'flex';
+        numberContainer.style.flexWrap = 'wrap';
+        numberContainer.style.gap = '5px';
+        numberContainer.style.marginTop = '5px';
+        numberContainer.style.justifyContent = 'center';
+        copyContainer.appendChild(numberContainer);
+
+        // Butonları sadece görünür satırlar için oluştur
+        const visibleRows = getVisibleRows();
+        visibleRows.forEach((row, index) => {
+            const firstCell = row.querySelector('tr > td[class*="Link1"]');
+            if (firstCell) {
+                const rowNum = parseInt(firstCell.innerText, 10);
+                if (!isNaN(rowNum)) {
+                    const numButton = document.createElement('button');
+                    numButton.innerText = rowNum;
+                    numButton.style.padding = '5px 10px';
+                    numButton.style.backgroundColor = '#6c757d';
+                    numButton.style.color = 'white';
+                    numButton.style.border = 'none';
+                    numButton.style.borderRadius = '3px';
+                    numButton.style.cursor = 'pointer';
+                    numButton.style.minWidth = '30px';
+                    numberContainer.appendChild(numButton);
+
+                    numButton.addEventListener('click', function() {
+                        copyRowData(index); // Görünür satırın index'ini gönder
+                    });
+                }
+            }
+        });
+    }
+
+    function getVisibleRows() {
+        const allRows = document.querySelectorAll('table[mo\\:type="ProcessRecord"]');
+        return Array.from(allRows).filter(row => row.offsetParent !== null);
+    }
+
+    function copyRowData(visibleRowIndex) {
+        const visibleRows = getVisibleRows();
+        if (visibleRows.length > visibleRowIndex) {
+            const row = visibleRows[visibleRowIndex];
+            const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
+
+            let textToCopy = null;
+            // Sondan başlayarak içinde metin olan ilk hücreyi bul
+            for (let i = cells.length - 1; i >= 0; i--) {
+                const cellText = cells[i].textContent.trim();
+                if (cellText) {
+                    textToCopy = cellText;
+                    break;
+                }
+            }
+
+            if (textToCopy) {
+                navigator.clipboard.writeText(textToCopy).then(function() {
+                    console.log('Kopyalandı:', textToCopy);
+                    alert('Kopyalandı: ' + textToCopy);
+                }, function(err) {
+                    console.error('Kopyalanamadı: ', err);
+                    alert('Kopyalanamadı.');
+                });
+            } else {
+                alert('Satırda kopyalanacak veri bulunamadı.');
+            }
+        } else {
+            alert('İstenen satır bulunamadı (görünür değil veya mevcut değil).');
+        }
     }
 
     // Function to autofill GGBS captcha
