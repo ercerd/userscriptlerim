@@ -74,7 +74,7 @@
         const buttonContainer = document.createElement('div');
         buttonContainer.style.position = 'fixed';
         buttonContainer.style.top = '10px';
-        buttonContainer.style.right = '520px';
+        buttonContainer.style.right = '10px';
         buttonContainer.style.zIndex = 1000;
         buttonContainer.style.display = 'flex';
         buttonContainer.style.flexDirection = 'column';
@@ -186,11 +186,10 @@
         copyContainer.appendChild(mainCopyButton);
 
         const numberContainer = document.createElement('div');
-        numberContainer.style.display = 'flex';
-        numberContainer.style.flexWrap = 'wrap';
+        numberContainer.style.display = 'grid';
+        numberContainer.style.gridTemplateColumns = 'repeat(4, 1fr)';
         numberContainer.style.gap = '5px';
         numberContainer.style.marginTop = '5px';
-        numberContainer.style.justifyContent = 'center';
         copyContainer.appendChild(numberContainer);
 
         // Butonları sadece görünür satırlar için oluştur
