@@ -676,7 +676,7 @@
     };
 
     const triggerAdditionalButton = (iframeDocument, buttonLabel) => {
-        const buttonLabels = ['ANK', 'BAL', 'INT', 'İST', 'İZM', 'İL', 'STA', 'MGA', 'MRL', 'MSM', 'PMG', 'SİA', 'SOU'];
+        const buttonLabels = ['ANK', 'BAL', 'INT', 'İST', 'İZM', 'İL', 'STA', 'MGA', 'MRL', 'MSM', 'PMG', 'SİA', 'SİM', 'SOU'];
         const index = buttonLabels.indexOf(buttonLabel);
         if (index !== -1) {
             selectDropdown(iframeDocument, 'CDYN_150', index + 1);
@@ -990,7 +990,7 @@
     };
 
     const createSquareButtons = (parentElement) => {
-        const buttonLabels = ['ANK', 'BAL', 'INT', 'İST', 'İZM', 'İL', 'STA', 'MGA', 'MRL', 'MSM', 'PMG', 'SİA', 'SOU'];
+        const buttonLabels = ['ANK', 'BAL', 'INT', 'İST', 'İZM', 'İL', 'STA', 'MGA', 'MRL', 'MSM', 'PMG', 'SİA', 'SİM', 'SOU'];
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'square-button-container';
         buttonContainer.style.display = 'grid';
