@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGBS AnaMenu Sidebar
 // @namespace    http://tampermonkey.net/
-// @version      1.21
+// @version      1.22
 // @description  Adds a sidebar with buttons to select specific values from dropdowns in any iframe and click a specific button
 // @author       Your Name
 // @match        http://172.20.20.103/cis/servlet/StartCISPage?PAGEURL=/FSIS/ggbs.giris.html&POPUPTITLE=AnaMenu
@@ -15,6 +15,8 @@
 // @match        http://ggbs.tarim.gov.tr/cis/servlet/StartCISPage?PAGEURL=/FSIS/ggbs.giris.html&POPUPTITLE=AnaMenu
 // @grant        GM_log
 // @grant        GM_addStyle
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/ggbsithalat.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/ggbsithalat.user.js
 // ==/UserScript==
 
 (function() {

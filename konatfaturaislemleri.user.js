@@ -1,11 +1,13 @@
     // ==UserScript==
     // @name         Konat Fatura İşlemleri
     // @namespace    http://tampermonkey.net/
-    // @version      1.3
+    // @version      1.4
     // @description  İşlemdeki belgeler sayfasındaki PDF'leri indirir ve faturaları onaylar
     // @author       Your Name
     // @match        https://konat.net.tr/dss33/v33/index.php?tpage=islemdeki-belgeler*
     // @grant        GM_addStyle
+    // @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
+    // @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
     // ==/UserScript==
 
     (function() {

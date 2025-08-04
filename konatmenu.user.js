@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         konatmenu
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7
 // @description  İşlemdeki Belgeler menüsünü açılır kapanır hale getir ve altına linkler ekle. Ayrıca yeni bir row ekleyip ortasına Pernod butonu yerleştir.
 // @author       You
 // @match        https://konat.net.tr/dss33/v33/*
 // @grant        none
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatmenu.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatmenu.user.js
 // ==/UserScript==
 
 (function() {

@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.3
+// @version      2.4
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
 // @match        http://*/ONBILDIRIM/*
 // @match        https://*/ONBILDIRIM/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
 // ==/UserScript==
 
 /* globals jQuery, $, waitForKeyElements */

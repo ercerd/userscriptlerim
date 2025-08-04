@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Advanced Form Filler for gorev_add.php
 // @namespace    http://212.174.41.133/
-// @version      1.6
+// @version      1.7
 // @description  Multiselect destekli form doldurma işlemi yapar
 // @match        http://212.174.41.133/gorev/gorev_add.php
 // @match        http://10.33.0.60/gorev/gorev_add.php
 // @grant        GM_addStyle
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/gorev.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/gorev.user.js
 // ==/UserScript==
 
 (function() {

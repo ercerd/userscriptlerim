@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name        TPS BelgeListesi Dropdown Ekleme
 // @namespace   violentmonkey
-// @version     1
+// @version     1.1
 // @description search-fld input alanının soluna dropdown ekleme
 // @match       https://uygulama.gtb.gov.tr/TekPencere/EBelge/BelgeListesi
 // @grant       none
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/tps.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/tps.user.js
 // ==/UserScript==
 
 (function() {
