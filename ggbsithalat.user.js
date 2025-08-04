@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         ggbsithalat
+// @name         GGBS AnaMenu Sidebar
 // @namespace    http://tampermonkey.net/
 // @version      1.21
 // @description  Adds a sidebar with buttons to select specific values from dropdowns in any iframe and click a specific button
