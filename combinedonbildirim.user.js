@@ -240,13 +240,41 @@
             }
 
             if (textToCopy) {
-                navigator.clipboard.writeText(textToCopy).then(function() {
-                    console.log('Kopyalandı:', textToCopy);
-                    alert('Kopyalandı: ' + textToCopy);
-                }, function(err) {
-                    console.error('Kopyalanamadı: ', err);
-                    alert('Kopyalanamadı.');
-                });
+                // Check for Clipboard API support (requires secure context - HTTPS)
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(textToCopy).then(function() {
+                        console.log('Kopyalandı:', textToCopy);
+                        alert('Kopyalandı: ' + textToCopy);
+                    }, function(err) {
+                        console.error('Kopyalanamadı (Clipboard API): ', err);
+                        alert('Kopyalanamadı.');
+                    });
+                } else {
+                    // Fallback for non-secure contexts (HTTP) or older browsers
+                    try {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = textToCopy;
+                        // Make the textarea invisible
+                        textArea.style.position = "fixed";
+                        textArea.style.top = "-9999px";
+                        textArea.style.left = "-9999px";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        const successful = document.execCommand('copy');
+                        document.body.removeChild(textArea);
+
+                        if (successful) {
+                            console.log('Kopyalandı (fallback):', textToCopy);
+                            alert('Kopyalandı: ' + textToCopy);
+                        } else {
+                            throw new Error('Fallback copy command failed.');
+                        }
+                    } catch (err) {
+                        console.error('Kopyalanamadı (fallback exception): ', err);
+                        alert('Kopyalanamadı.');
+                    }
+                }
             } else {
                 alert('Satırda kopyalanacak veri bulunamadı.');
             }
