@@ -14,9 +14,10 @@
 
   // Dropdown için seçenekler
   const dropdownOptions = [
-    { value: '2524308110090207', label: '2025' },
-    { value: '2424308110090205', label: '2024' },
-    { value: '2324308110090204', label: '2023' },
+    { value: '2524308110090207', label: '2025-207' },
+    { value: '2524308110090206', label: '2025-206' },
+    { value: '2424308110090205', label: '2024-205' },
+    { value: '2324308110090204', label: '2023-204' },
 
 
   ];
@@ -72,6 +73,16 @@
 
   // Dropdown'ı "col-sm-3" div'ine ekle
   targetDiv.appendChild(dropdown);
+
+  // Sayfa ilk açıldığında ilk seçeneği yükle ve imleci sona al
+  if (dropdownOptions.length > 0) {
+    const firstValue = dropdownOptions[0].value;
+    inputField.value = firstValue;
+    dropdown.value = firstValue;
+    inputField.focus();
+    // İmleci metnin sonuna konumlandır
+    inputField.setSelectionRange(inputField.value.length, inputField.value.length);
+  }
 
   // Dropdown değiştiğinde input alanını güncelle
   dropdown.addEventListener('change', function () {
