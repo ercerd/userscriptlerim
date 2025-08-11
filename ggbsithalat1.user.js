@@ -300,242 +300,272 @@
     }
 
 
-    const findAndClickIthalat = async () => {
-        const findElementInIframes = (doc, elementId) => {
-            const element = doc.getElementById(elementId);
-            if (element) return { document: doc, element };
+    const waitForElementById = (doc, elementId, timeout = 10000) => new Promise((resolve, reject) => {
+        const check = () => doc.getElementById(elementId);
+        let element = check();
+        if (element) return resolve(element);
 
-            const iframes = doc.getElementsByTagName('iframe');
-            for (let i = 0; i < iframes.length; i++) {
+        const observer = new MutationObserver(() => {
+            element = check();
+            if (element) {
+                observer.disconnect();
+                clearTimeout(timer);
+                resolve(element);
+            }
+        });
+        observer.observe(doc.body, { childList: true, subtree: true });
+        const timer = setTimeout(() => {
+            observer.disconnect();
+            reject(new Error(`Element with ID '${elementId}' not found within ${timeout}ms`));
+        }, timeout);
+    });
+
+    const waitForButtonClickable = (doc, buttonId, timeout = 10000) => {
+        return new Promise((resolve, reject) => {
+            const check = () => {
+                const button = doc.getElementById(buttonId);
+                if (!button || isButtonDisabled(button)) return null;
+
+                let currentElement = button;
+                while (currentElement && currentElement !== doc.body) {
+                    const style = window.getComputedStyle(currentElement);
+                    if (style.display === 'none' || style.visibility === 'hidden') {
+                        return null;
+                    }
+                    currentElement = currentElement.parentElement;
+                }
+                return button;
+            };
+
+            let element = check();
+            if (element) return resolve(element);
+
+            const observer = new MutationObserver(() => {
+                element = check();
+                if (element) {
+                    observer.disconnect();
+                    clearTimeout(timer);
+                    resolve(element);
+                }
+            });
+
+            observer.observe(doc.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['disabled', 'style', 'class']
+            });
+
+            const timer = setTimeout(() => {
+                observer.disconnect();
+                reject(new Error(`Timeout waiting for button '${buttonId}' to become clickable within ${timeout}ms.`));
+            }, timeout);
+        });
+    };
+
+    const waitForIframe = (urlPart, timeout = 10000) => {
+        return new Promise((resolve, reject) => {
+            const check = () => findTargetIframe(urlPart);
+            let iframeDoc = check();
+            if (iframeDoc) return resolve(iframeDoc);
+
+            const interval = setInterval(() => {
+                iframeDoc = check();
+                if (iframeDoc) {
+                    clearInterval(interval);
+                    clearTimeout(timer);
+                    resolve(iframeDoc);
+                }
+            }, 500);
+
+            const timer = setTimeout(() => {
+                clearInterval(interval);
+                reject(new Error(`Timeout waiting for iframe with URL containing '${urlPart}'`));
+            }, timeout);
+        });
+    };
+
+    const findElementInIframes = (doc, elementId) => {
+        const element = doc.getElementById(elementId);
+        if (element) return { document: doc, element };
+
+        const iframes = doc.getElementsByTagName('iframe');
+        for (let i = 0; i < iframes.length; i++) {
+            try {
+                const result = findElementInIframes(iframes[i].contentDocument, elementId);
+                if (result) return result;
+            } catch (error) {
+                GM_log('Iframe erişim hatası: ' + error);
+            }
+        }
+        return null;
+    };
+
+    const proceedWithIthalatIframe = async (targetIframeDoc) => {
+        try {
+            GM_log('İthalat iframe\'i bulundu. İşlemler başlıyor...');
+
+            const b29Button = await waitForButtonClickable(targetIframeDoc, 'B_29');
+            GM_log('B_29 butonu hazır ve aktif');
+            await clickButtonWithId(b29Button.ownerDocument, 'B_29');
+
+            const obsIframeDoc = await waitForIframe('ggbs.ithalat.ithalatOBSorgulama.html');
+            GM_log('ggbs.ithalat.ithalatOBSorgulama.html iframe\'i bulundu ve görünür');
+
+            const inputField = await waitForElementById(obsIframeDoc, 'F_32');
+            GM_log('F_32 input alanı bulundu');
+
+            if (inputField.disabled) {
+                GM_log('F_32 input alanı disabled. Etkinleşmesi bekleniyor...');
+                await new Promise(resolve => {
+                    const observer = new MutationObserver(() => {
+                        if (!inputField.disabled) {
+                            observer.disconnect();
+                            resolve();
+                        }
+                    });
+                    observer.observe(inputField, { attributes: true, attributeFilter: ['disabled'] });
+                });
+                GM_log('F_32 input alanı etkinleşti.');
+            }
+
+            inputField.focus();
+            let textToPaste = null;
+            const onbildirimRegex = /^\d{2}-\d{6,8}-\d{1,4}$/;
+
+            if (location.protocol === 'https:' && navigator.clipboard && navigator.clipboard.readText) {
                 try {
-                    const result = findElementInIframes(iframes[i].contentDocument, elementId);
-                    if (result) return result;
+                    textToPaste = await navigator.clipboard.readText();
+                    if (!onbildirimRegex.test(textToPaste)) {
+                        GM_log('Panodan okunan metin önbildirim formatında değil. Kullanıcıdan manuel giriş istenecek.');
+                        textToPaste = null;
+                    }
                 } catch (error) {
-                    GM_log('Iframe erişim hatası: ' + error);
+                    GM_log('Panodan metin okuma yetkisi reddedildi veya başka bir hata oluştu: ' + error);
+                    textToPaste = null;
+                }
+            } else {
+                GM_log('HTTP ortamında veya Clipboard API desteklenmiyor. Kullanıcıdan manuel giriş istenecek.');
+            }
+
+            if (textToPaste) {
+                inputField.value = textToPaste;
+                triggerEvent(inputField, 'change');
+                triggerEvent(inputField, 'input');
+                GM_log('F_32 input alanına panodaki metin yapıştırıldı: ' + textToPaste);
+            } else {
+                const userInput = await showCustomPrompt('Lütfen Önbildirim numarasını giriniz (örn. 20-110236-300). Panodan yapıştırmak için Ctrl+V kullanın:');
+                if (userInput && onbildirimRegex.test(userInput)) {
+                    inputField.value = userInput;
+                    triggerEvent(inputField, 'change');
+                    triggerEvent(inputField, 'input');
+                    GM_log('F_32 input alanına kullanıcı metni yapıştırıldı: ' + userInput);
+                } else if (userInput) {
+                    GM_log('Girilen metin önbildirim formatında değil: ' + userInput);
+                    alert('Hatalı format! Lütfen doğru formatta bir önbildirim numarası girin.');
+                    throw new Error('Hatalı önbildirim formatı');
+                } else {
+                    GM_log('Kullanıcı metin girmedi veya iptal etti.');
+                    throw new Error('Metin girilmedi');
                 }
             }
-            return null;
-        };
 
-        const proceedWithIthalatIframe = async (targetIframeDoc) => {
-            await new Promise(resolve => {
-                let attempts = 0;
-                const maxAttempts = 10;
-                const checkInterval = setInterval(() => {
-                    const button = targetIframeDoc.getElementById('B_29');
-                    if (button && !isButtonDisabled(button)) {
-                        clearInterval(checkInterval);
-                        GM_log('B_29 butonu hazır ve aktif');
-                        resolve(button);
-                    } else if (++attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                        GM_log('B_29 butonu 5 saniye içinde hazır olmadı');
-                        resolve(null); // Resolve with null to continue, handle failure later
-                    }
-                }, 1000);
-            }).then(button => {
-                if (button) {
-                    return clickButtonWithId(button.ownerDocument, 'B_29');
-                } else {
-                    throw new Error('B_29 hazır değil');
-                }
-            });
+            const b21Button = await waitForButtonClickable(obsIframeDoc, 'B_21');
+            GM_log('B_21 butonu hazır ve aktif');
+            await clickButtonWithId(b21Button.ownerDocument, 'B_21');
+            GM_log('B_21 butonu tıklandı');
 
-            const { obsIframeDoc, inputField } = await new Promise((resolve, reject) => {
-                let attempts = 0;
-                const maxAttempts = 10;
-                const checkInterval = setInterval(() => {
-                    const obsIframeDoc = findTargetIframe('ggbs.ithalat.ithalatOBSorgulama.html');
-                    if (obsIframeDoc) {
-                        const inputField = obsIframeDoc.getElementById('F_32');
-                        if (inputField) {
-                            clearInterval(checkInterval);
-                            GM_log('ggbs.ithalat.ithalatOBSorgulama.html iframe\'i ve F_32 bulundu');
-                            resolve({ obsIframeDoc, inputField });
-                        } else if (++attempts >= maxAttempts) {
-                            clearInterval(checkInterval);
-                            GM_log('F_32 input alanı 5 saniye içinde bulunamadı');
-                            reject('F_32 zaman aşımına uğradı');
-                        }
-                    } else if (++attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                        GM_log('ggbs.ithalat.ithalatOBSorgulama.html iframe\'i 5 saniye içinde bulunamadı veya görünür değil');
-                        reject('OBS iframe zaman aşımına uğradı');
-                    }
-                }, 500);
-            });
+            const b197Button = await waitForButtonClickable(obsIframeDoc, 'B_197');
+            GM_log('B_197 butonu hazır ve aktif');
+            await clickButtonWithId(b197Button.ownerDocument, 'B_197');
+            GM_log('B_197 butonu tıklandı');
 
-            await new Promise(async (resolve, reject) => {
-                setTimeout(async () => {
-                    if (inputField && !inputField.disabled) {
-                        inputField.focus();
-                        let textToPaste = null;
-                        const onbildirimRegex = /^\d{2}-\d{6,8}-\d{1,4}$/;
+        } catch (error) {
+            GM_log(`proceedWithIthalatIframe içinde hata: ${error.message}`);
+            throw error;
+        }
+    };
 
-                        if (location.protocol === 'https:' && navigator.clipboard && navigator.clipboard.readText) {
-                            try {
-                                textToPaste = await navigator.clipboard.readText();
-                                if (!onbildirimRegex.test(textToPaste)) {
-                                    GM_log('Panodan okunan metin önbildirim formatında değil. Kullanıcıdan manuel giriş istenecek.');
-                                    textToPaste = null; // Format uymuyorsa sıfırla
-                                }
-                            } catch (error) {
-                                GM_log('Panodan metin okuma yetkisi reddedildi veya başka bir hata oluştu: ' + error);
-                                textToPaste = null;
-                            }
-                        } else {
-                            GM_log('HTTP ortamında veya Clipboard API desteklenmiyor. Kullanıcıdan manuel giriş istenecek.');
-                        }
+    const findAndClickIthalat = async () => {
+        try {
+            let ithalatIframeDoc = findTargetIframe('ggbs.ithalat.ithalat.html');
+            if (ithalatIframeDoc) {
+                GM_log('ggbs.ithalat.ithalat.html iframe\'i zaten açık ve görünür, üst ve alt menü adımları atlanıyor');
+                await proceedWithIthalatIframe(ithalatIframeDoc);
+                return;
+            }
 
-                        if (textToPaste) {
-                            inputField.value = textToPaste;
-                            triggerEvent(inputField, 'change');
-                            triggerEvent(inputField, 'input');
-                            GM_log('F_32 input alanına panodaki metin yapıştırıldı: ' + textToPaste);
-                            resolve(obsIframeDoc);
-                        } else {
-                            const userInput = await showCustomPrompt('Lütfen Önbildirim numarasını giriniz (örn. 20-110236-300). Panodan yapıştırmak için Ctrl+V kullanın:');
-                            if (userInput) {
-                                if (onbildirimRegex.test(userInput)) {
-                                    inputField.value = userInput;
-                                    triggerEvent(inputField, 'change');
-                                    triggerEvent(inputField, 'input');
-                                    GM_log('F_32 input alanına kullanıcı metni yapıştırıldı: ' + userInput);
-                                    resolve(obsIframeDoc);
-                                } else {
-                                    GM_log('Girilen metin önbildirim formatında değil: ' + userInput);
-                                    alert('Hatalı format! Lütfen doğru formatta bir önbildirim numarası girin.');
-                                    reject(new Error('Hatalı önbildirim formatı'));
-                                }
-                            } else {
-                                GM_log('Kullanıcı metin girmedi veya iptal etti.');
-                                reject(new Error('Metin girilmedi'));
-                            }
-                        }
-                    } else {
-                        GM_log('F_32 input alanı disabled veya hazır değil');
-                        resolve(obsIframeDoc);
-                    }
-                }, 1500);
-            });
-
-            await new Promise((resolve, reject) => {
-                let attempts = 0;
-                const maxAttempts = 10;
-                const checkInterval = setInterval(() => {
-                    const button = obsIframeDoc.getElementById('B_21');
-                    if (button && !isButtonDisabled(button)) {
-                        clearInterval(checkInterval);
-                        GM_log('B_21 butonu hazır ve aktif');
-                        resolve(button);
-                    } else if (++attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                        GM_log('B_21 butonu 5 saniye içinde hazır olmadı');
-                        reject('B_21 hazır değil');
-                    }
-                }, 500);
-            }).then(button => {
-                return clickButtonWithId(button.ownerDocument, 'B_21')
-                    .then((clicked) => {
-                        if (clicked) {
-                            GM_log('B_21 butonu tıklandı');
-                        }
-                        return button.ownerDocument;
-                    });
-            });
-
-            await new Promise((resolve, reject) => {
-                let attempts = 0;
-                const maxAttempts = 20;
-                const checkInterval = setInterval(() => {
-                    const button = obsIframeDoc.getElementById('B_197');
-                    if (button && !isButtonDisabled(button)) {
-                        clearInterval(checkInterval);
-                        GM_log('B_197 butonu hazır ve aktif');
-                        resolve(button);
-                    } else if (++attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                        GM_log('B_197 butonu 10 saniye içinde hazır olmadı');
-                        reject('B_197 hazır değil');
-                    }
-                }, 500);
-            }).then(button => {
-                return clickButtonWithId(button.ownerDocument, 'B_197')
-                    .then((clicked) => {
-                        if (clicked) {
-                            GM_log('B_197 butonu tıklandı');
-                        }
-                    });
-            });
-        };
-
-        const ithalatIframeDoc = findTargetIframe('ggbs.ithalat.ithalat.html');
-        if (ithalatIframeDoc) {
-            GM_log('ggbs.ithalat.ithalat.html iframe\'i zaten açık ve görünür, üst ve alt menü adımları atlanıyor');
-            return proceedWithIthalatIframe(ithalatIframeDoc);
-        } else {
             GM_log('ggbs.ithalat.ithalat.html iframe\'i açık veya görünür değil, menü adımları çalıştırılacak');
-        }
 
-        const topMenuResult = findElementInIframes(document, 'CASAMENU2TOPTEXT_57');
-        if (!topMenuResult) {
-            GM_log('Üst menü öğesi (CASAMENU2TOPTEXT_57) herhangi bir iframe\'de bulunamadı');
-            return Promise.reject('Üst menü bulunamadı');
-        }
+            const topMenuResult = await new Promise((resolve, reject) => {
+                const check = () => findElementInIframes(document, 'CASAMENU2TOPTEXT_57');
+                let result = check();
+                if (result) return resolve(result);
 
-        const { document: topIframeDoc, element: topMenuItem } = topMenuResult;
-        const topMenuLink = topMenuItem.querySelector('a');
-        if (!topMenuLink) {
-            GM_log('Üst menü içindeki <a> etiketi bulunamadı');
-            return Promise.reject('Üst menü linki bulunamadı');
-        }
+                const observer = new MutationObserver(() => {
+                    result = check();
+                    if (result) {
+                        observer.disconnect();
+                        clearTimeout(timer);
+                        resolve(result);
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+                const timer = setTimeout(() => {
+                    observer.disconnect();
+                    reject(new Error('Üst menü öğesi (CASAMENU2TOPTEXT_57) 10 saniye içinde bulunamadı'));
+                }, 10000);
+            });
 
-        await new Promise((resolve) => {
+            const { document: topIframeDoc, element: topMenuItem } = topMenuResult;
+            const topMenuLink = topMenuItem.querySelector('a');
+            if (!topMenuLink) {
+                throw new Error('Üst menü içindeki <a> etiketi bulunamadı');
+            }
+
             triggerEvent(topMenuLink, 'mouseover');
-            setTimeout(() => {
-                topMenuLink.click();
-                GM_log('Üst menü (İthalat) tıklandı');
-                resolve();
-            }, 100);
-        });
+            await new Promise(r => setTimeout(r, 100));
+            topMenuLink.click();
+            GM_log('Üst menü (İthalat) tıklandı');
 
-        await new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 10;
-            const checkInterval = setInterval(() => {
-                const menuResult = findElementInIframes(document, 'MENULNK_L1_C58');
-                if (menuResult) {
-                    const { element: menuItem } = menuResult;
-                    clearInterval(checkInterval);
-                    menuItem.click();
-                    GM_log('İthalat menü öğesi (MENULNK_L1_C58) tıklandı');
-                    resolve();
-                } else if (++attempts >= maxAttempts) {
-                    clearInterval(checkInterval);
-                    GM_log('Alt menü (MENULNK_L1_C58) 5 saniye içinde bulunamadı');
-                    reject('Alt menü zaman aşımına uğradı');
-                }
-            }, 500);
-        });
+            const subMenuResult = await new Promise((resolve, reject) => {
+                const check = () => {
+                    const res = findElementInIframes(document, 'MENULNK_L1_C58');
+                    if (res && res.element.offsetParent !== null) {
+                        return res;
+                    }
+                    return null;
+                };
+                let result = check();
+                if (result) return resolve(result);
 
-        const targetIframeDoc = await new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 10;
-            const checkInterval = setInterval(() => {
-                const targetIframeDoc = findTargetIframe('ggbs.ithalat.ithalat.html');
-                if (targetIframeDoc) {
-                    clearInterval(checkInterval);
-                    GM_log('ggbs.ithalat.ithalat.html iframe\'i bulundu ve görünür');
-                    resolve(targetIframeDoc);
-                } else if (++attempts >= maxAttempts) {
-                    clearInterval(checkInterval);
-                    GM_log('ggbs.ithalat.ithalat.html iframe\'i 5 saniye içinde bulunamadı veya görünür değil');
-                    reject('Hedef iframe zaman aşımına uğradı');
-                }
-            }, 500);
-        });
+                const observer = new MutationObserver(() => {
+                    result = check();
+                    if (result) {
+                        observer.disconnect();
+                        clearTimeout(timer);
+                        resolve(result);
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+                const timer = setTimeout(() => {
+                    observer.disconnect();
+                    reject(new Error('Alt menü (MENULNK_L1_C58) 10 saniye içinde bulunamadı veya görünür değil'));
+                }, 10000);
+            });
 
-        await proceedWithIthalatIframe(targetIframeDoc);
+            subMenuResult.element.click();
+            GM_log('İthalat menü öğesi (MENULNK_L1_C58) tıklandı');
+
+            const targetIframeDoc = await waitForIframe('ggbs.ithalat.ithalat.html');
+            GM_log('ggbs.ithalat.ithalat.html iframe\'i bulundu ve görünür');
+
+            await proceedWithIthalatIframe(targetIframeDoc);
+
+        } catch (error) {
+            GM_log(`findAndClickIthalat içinde hata: ${error.message}`);
+            alert(`Bir hata oluştu: ${error.message}`);
+        }
     };
 
     const button1Action = () => {
