@@ -72,15 +72,28 @@
 
     // Function to create and position buttons
     function createButtons() {
+        // Hedef içerik kolonunu bul.
+        const anchorElement = document.querySelector('table[width="1051"]');
+
         // Create a container for the buttons
         const buttonContainer = document.createElement('div');
-        buttonContainer.style.position = 'fixed';
-        buttonContainer.style.top = '10px';
-        buttonContainer.style.right = '10px';
+        buttonContainer.style.position = 'fixed'; // Sayfa kaysa bile butonlar sabit kalır.
+        buttonContainer.style.top = '30px';      // Ekranın üstünden boşluk.
         buttonContainer.style.zIndex = 1000;
         buttonContainer.style.display = 'flex';
         buttonContainer.style.flexDirection = 'column';
         buttonContainer.style.gap = '10px';
+
+        if (anchorElement) {
+            const rect = anchorElement.getBoundingClientRect();
+            // Butonları ana tablonun sağına konumlandır.
+            buttonContainer.style.left = (rect.right + 15) + 'px'; // 15px sağdan boşluk
+        } else {
+            // Eğer referans tablo bulunamazsa, en sağa sabitle.
+            console.log("Ana içerik kolonu (width=1051) bulunamadı, butonlar varsayılan konuma yerleştiriliyor.");
+            buttonContainer.style.right = '10px';
+        }
+
         document.body.appendChild(buttonContainer);
 
         // Create button for Ürün_Ham
