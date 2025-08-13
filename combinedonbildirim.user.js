@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.4
+// @version      2.5
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -155,7 +155,26 @@
                 console.log("Sertifika button not found.");
             }
         });
+        // Create button for İçerik İndir
+        const icerikButton = document.createElement('button');
+        icerikButton.innerText = 'İçerik İndir';
+        icerikButton.style.padding = '10px 20px';
+        icerikButton.style.backgroundColor = 'green';
+        icerikButton.style.color = 'white';
+        icerikButton.style.border = 'none';
+        icerikButton.style.borderRadius = '5px';
+        icerikButton.style.cursor = 'pointer';
+        buttonContainer.appendChild(icerikButton);
 
+        icerikButton.addEventListener('click', function() {
+            const icerikButtonElement = document.querySelector('img[name="Button_icerik_gost"]');
+            if (icerikButtonElement) {
+                icerikButtonElement.click();
+                console.log("İçerik button clicked!");
+            } else {
+                console.log("İçerik button not found.");
+            }
+        });
         // Create button for Formu Sıfırla
         const resetButton = document.createElement('button');
         resetButton.innerText = 'Formu Sıfırla';
