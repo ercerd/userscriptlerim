@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.10
+// @version      2.12
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
 // @match        http://*/ONBILDIRIM/*
 // @match        https://*/ONBILDIRIM/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
-// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
-// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js  
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js  
 // ==/UserScript==
 
 /* globals jQuery, $, waitForKeyElements */
@@ -70,15 +70,42 @@
         console.log('Tüm görünür form alanları sıfırlandı.');
     }
 
+    // Toast bildirimleri için yardımcı fonksiyon
+    function showToast(message, type = 'success') {
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.position = 'fixed';
+            toastContainer.style.bottom = '20px';
+            toastContainer.style.right = '20px';
+            toastContainer.style.zIndex = '10000';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        toast.style.padding = '10px 20px';
+        toast.style.borderRadius = '5px';
+        toast.style.color = '#fff';
+        toast.style.marginBottom = '10px';
+        toast.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        toast.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545'; // Yeşil veya kırmızı arka plan
+
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
     // Function to create and position buttons
     function createButtons() {
-        // Hedef içerik kolonunu bul.
         const anchorElement = document.querySelector('table[width="1051"]');
-
-        // Create a container for the buttons
         const buttonContainer = document.createElement('div');
-        buttonContainer.style.position = 'fixed'; // Sayfa kaysa bile butonlar sabit kalır.
-        buttonContainer.style.top = '30px';      // Ekranın üstünden boşluk.
+        buttonContainer.style.position = 'fixed';
+        buttonContainer.style.top = '30px';
         buttonContainer.style.zIndex = 1000;
         buttonContainer.style.display = 'flex';
         buttonContainer.style.flexDirection = 'column';
@@ -86,10 +113,8 @@
 
         if (anchorElement) {
             const rect = anchorElement.getBoundingClientRect();
-            // Butonları ana tablonun sağına konumlandır.
-            buttonContainer.style.left = (rect.right + 15) + 'px'; // 15px sağdan boşluk
+            buttonContainer.style.left = (rect.right + 15) + 'px';
         } else {
-            // Eğer referans tablo bulunamazsa, en sağa sabitle.
             console.log("Ana içerik kolonu (width=1051) bulunamadı, butonlar varsayılan konuma yerleştiriliyor.");
             buttonContainer.style.right = '10px';
         }
@@ -108,9 +133,22 @@
         buttonContainer.appendChild(urunHamButton);
 
         urunHamButton.addEventListener('click', function() {
-            resetFormFields();
-            document.getElementById('ONAYDURUM').value = '4';
-            document.getElementById('ORGANIZASYONREF').value = '24';
+            try {
+                resetFormFields();
+
+                const onayDurum = document.getElementById('ONAYDURUM');
+                const organizasyonRef = document.getElementById('ORGANIZASYONREF');
+
+                if (onayDurum && organizasyonRef) {
+                    onayDurum.value = '4';
+                    organizasyonRef.value = '24';
+                    showToast('Ürün_Ham veri girişi yapıldı.', 'success');
+                } else {
+                    throw new Error('Gerekli alanlar bulunamadı.');
+                }
+            } catch (error) {
+                showToast('Ürün_Ham işlemi başarısız: Alanlar bulunamadı.', 'error');
+            }
         });
 
         // Create button for Sevkiyat_Ham
@@ -125,29 +163,47 @@
         buttonContainer.appendChild(sevkiyatHamButton);
 
         sevkiyatHamButton.addEventListener('click', function() {
-            resetFormFields();
-            document.getElementById('ONAYDURUM').value = '1';
+            try {
+                resetFormFields();
 
-            const checkbox = document.getElementById('ALTGRUP_GUMRUK');
-            if (!checkbox.checked) {
-                checkbox.click();
+                const onayDurum = document.getElementById('ONAYDURUM');
+                const altGrupGumruk = document.getElementById('ALTGRUP_GUMRUK');
+                const gumrukAdi = document.getElementById('GUMRUKADI');
+                const gumrukTarihSecenek = document.getElementById('GUMRUKTARIHBSECENEK');
+                const gumrukTarihB1 = document.getElementById('GUMRUKTARIHB1');
+
+                if (
+                    onayDurum &&
+                    altGrupGumruk &&
+                    gumrukAdi &&
+                    gumrukTarihSecenek &&
+                    gumrukTarihB1
+                ) {
+                    onayDurum.value = '1';
+
+                    if (!altGrupGumruk.checked) {
+                        altGrupGumruk.click();
+                    }
+
+                    gumrukAdi.value = '24';
+                    gumrukAdi.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    gumrukTarihSecenek.value = '3';
+                    gumrukTarihSecenek.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    const date = getPreviousWorkday(new Date());
+                    const formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()} 00:00:00.0`;
+                    gumrukTarihB1.value = formattedDate;
+                    gumrukTarihB1.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    showToast('Sevkiyat_Ham veri girişi yapıldı.', 'success');
+                } else {
+                    throw new Error('Gerekli alanlar bulunamadı.');
+                }
+            } catch (error) {
+                showToast('Sevkiyat_Ham işlemi başarısız: Alanlar bulunamadı.', 'error');
             }
-
-            const gumrukAdi = document.getElementById('GUMRUKADI');
-            gumrukAdi.value = '24';
-            gumrukAdi.dispatchEvent(new Event('change', { bubbles: true }));
-
-            const gumrukTarihSecenek = document.getElementById('GUMRUKTARIHBSECENEK');
-            gumrukTarihSecenek.value = '3';
-            gumrukTarihSecenek.dispatchEvent(new Event('change', { bubbles: true }));
-
-            const date = getPreviousWorkday(new Date());
-            const formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()} 00:00:00.0`;
-            const gumrukTarihB1 = document.getElementById('GUMRUKTARIHB1');
-            gumrukTarihB1.value = formattedDate;
-            gumrukTarihB1.dispatchEvent(new Event('change', { bubbles: true }));
         });
-
         // Create button for Sertifika İndir
         const sertifikaButton = document.createElement('button');
         sertifikaButton.innerText = 'Sertifika İndir';
@@ -160,14 +216,19 @@
         buttonContainer.appendChild(sertifikaButton);
 
         sertifikaButton.addEventListener('click', function() {
-            const sertifikaButtonElement = document.querySelector('img[name="Button_Sertifika_gost"]');
-            if (sertifikaButtonElement) {
-                sertifikaButtonElement.click();
-                console.log("Sertifika button clicked!");
-            } else {
-                console.log("Sertifika button not found.");
+            try {
+                const sertifikaButtonElement = document.querySelector('img[name="Button_Sertifika_gost"]');
+                if (sertifikaButtonElement) {
+                    sertifikaButtonElement.click();
+                    showToast('Sertifika indirme işlemi başlatıldı.', 'success');
+                } else {
+                    throw new Error('Sertifika butonu bulunamadı.');
+                }
+            } catch (error) {
+                showToast('Sertifika indirme işlemi başarısız: ' + error.message, 'error');
             }
         });
+
         // Create button for İçerik İndir
         const icerikButton = document.createElement('button');
         icerikButton.innerText = 'İçerik İndir';
@@ -180,14 +241,19 @@
         buttonContainer.appendChild(icerikButton);
 
         icerikButton.addEventListener('click', function() {
-            const icerikButtonElement = document.querySelector('img[name="Button_icerik_gost"]');
-            if (icerikButtonElement) {
-                icerikButtonElement.click();
-                console.log("İçerik button clicked!");
-            } else {
-                console.log("İçerik button not found.");
+            try {
+                const icerikButtonElement = document.querySelector('img[name="Button_icerik_gost"]');
+                if (icerikButtonElement) {
+                    icerikButtonElement.click();
+                    showToast('İçerik indirme işlemi başlatıldı.', 'success');
+                } else {
+                    throw new Error('İçerik butonu bulunamadı.');
+                }
+            } catch (error) {
+                showToast('İçerik indirme işlemi başarısız: ' + error.message, 'error');
             }
         });
+
         // Create button for Formu Sıfırla
         const resetButton = document.createElement('button');
         resetButton.innerText = 'Formu Sıfırla';
@@ -199,7 +265,14 @@
         resetButton.style.cursor = 'pointer';
         buttonContainer.appendChild(resetButton);
 
-        resetButton.addEventListener('click', resetFormFields);
+        resetButton.addEventListener('click', function() {
+            try {
+                resetFormFields();
+                showToast('Form sıfırlandı.', 'success');
+            } catch (error) {
+                showToast('Form sıfırlama işlemi başarısız: ' + error.message, 'error');
+            }
+        });
 
         // --- ID Kopyala Butonları (Dinamik) ---
         const copyContainer = document.createElement('div');
@@ -252,194 +325,9 @@
         });
     }
 
-    function getVisibleRows() {
-        const allRows = document.querySelectorAll('table[mo\\:type="ProcessRecord"]');
-        return Array.from(allRows).filter(row => row.offsetParent !== null);
-    }
-
-function copyRowData(visibleRowIndex) {
-    const visibleRows = getVisibleRows();
-    if (visibleRows.length > visibleRowIndex) {
-        const row = visibleRows[visibleRowIndex];
-        const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
-
-        let textToCopy = null;
-        // Sondan başlayarak içinde metin olan ilk hücreyi bul
-        for (let i = cells.length - 1; i >= 0; i--) {
-            const cellText = cells[i].textContent.trim();
-            if (cellText) {
-                textToCopy = cellText;
-                break;
-            }
-        }
-
-        if (textToCopy) {
-            // Check for Clipboard API support (requires secure context - HTTPS)
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(textToCopy).then(function() {
-                    console.log('Kopyalandı:', textToCopy);
-                    showToast('Kopyalandı: ' + textToCopy);
-                }, function(err) {
-                    console.error('Kopyalanamadı (Clipboard API): ', err);
-                    showToast('Kopyalanamadı.', 'error');
-                });
-            } else {
-                // Fallback for non-secure contexts (HTTP) or older browsers
-                try {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = textToCopy;
-                    // Make the textarea invisible
-                    textArea.style.position = "fixed";
-                    textArea.style.top = "-9999px";
-                    textArea.style.left = "-9999px";
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                    const successful = document.execCommand('copy');
-                    document.body.removeChild(textArea);
-
-                    if (successful) {
-                        console.log('Kopyalandı (fallback):', textToCopy);
-                        showToast('Kopyalandı: ' + textToCopy);
-                    } else {
-                        throw new Error('Fallback copy command failed.');
-                    }
-                } catch (err) {
-                    console.error('Kopyalanamadı (fallback exception): ', err);
-                    showToast('Kopyalanamadı.', 'error');
-                }
-            }
-        } else {
-            showToast('Satırda kopyalanacak veri bulunamadı.', 'error');
-        }
-    } else {
-        showToast('İstenen satır bulunamadı (görünür değil veya mevcut değil).', 'error');
-    }
-}
-
-// Toast bildirimleri için yardımcı fonksiyon
-function showToast(message, type = 'success') {
-    // Toast container'ı oluştur
-    let toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.style.position = 'fixed';
-        toastContainer.style.bottom = '20px';
-        toastContainer.style.right = '20px';
-        toastContainer.style.zIndex = '10000';
-        document.body.appendChild(toastContainer);
-    }
-
-    // Tek bir toast mesajı oluştur
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    toast.style.padding = '10px 20px';
-    toast.style.borderRadius = '5px';
-    toast.style.color = '#fff';
-    toast.style.marginBottom = '10px';
-    toast.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-    toast.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545'; // Yeşil veya kırmızı arka plan
-
-    // Toast'u ekrana ekle
-    toastContainer.appendChild(toast);
-
-    // Otomatik olarak 3 saniye sonra kaybolmasını sağla
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
-}
-
-    // Function to autofill GGBS captcha
-    function autofillCaptcha() {
-        const atr1a = document.getElementById("image1").outerHTML.slice(78, 79);
-        const atr11 = atr1a === '0' ? 'r' : atr1a;
-
-        const atr = document.getElementById("image2").outerHTML.slice(78, 79);
-        const atr22 = atr === '0' ? 'r' : atr;
-
-        const atr3 = document.getElementById("image3").outerHTML.slice(78, 79);
-        const atr33 = atr3 === '0' ? 'r' : atr3;
-
-        const atr4 = document.getElementById("image4").outerHTML.slice(78, 79);
-        const atr44 = atr4 === '0' ? 'r' : atr4;
-
-        const erccaptcha = atr11 + atr22 + atr33 + atr44;
-        $("#kulkont1").val(erccaptcha);
-    }
-
-    // Function to update KONTROLTARIHI and ACIKLAMAILGUMRUK fields
-    // Using exact implementation from the second script that was working correctly
-    function updateFields() {
-        const dateInput = document.querySelector('input[mo\\:name="KONTROLTARIHI"]');
-        const explanationArea = document.querySelector('textarea[id="ACIKLAMAILGUMRUK"]');
-        const sertifikaButton = document.querySelector('img[name="Button_Sertifika_gost"]');
-        const yokturMessage = document.querySelector('td#SERTIFIKADOSYA') ? document.querySelector('td#SERTIFIKADOSYA').textContent : '';
-
-        if (dateInput && !dateInput.disabled) {
-            console.log("KONTROLTARIHI field found and enabled:", dateInput);
-            const newDateValue = getFormattedDate();
-            console.log("Setting new KONTROLTARIHI value:", newDateValue);
-            dateInput.value = newDateValue;
-            console.log("KONTROLTARIHI field updated successfully.");
-            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-            console.log("KONTROLTARIHI field not found or disabled.");
-        }
-
-        if (explanationArea && !explanationArea.disabled) {
-            console.log("ACIKLAMAILGUMRUK area found and enabled:", explanationArea);
-
-            if (explanationArea.value.includes("GTIP değiştirildi")) {
-                console.log("Text 'GTIP değiştirildi' found in ACIKLAMAILGUMRUK area.");
-                // Insert "EE" on the second line
-                const lines = explanationArea.value.split('\n');
-                if (lines.length > 1) {
-                    lines[1] = 'EE'; // Update the second line
-                } else {
-                    lines.push('EE'); // Add "EE" if there is only one line
-                }
-                explanationArea.value = lines.join('\n');
-                console.log("ACIKLAMAILGUMRUK field updated with 'EE' on the second line.");
-            } else {
-                console.log("Text 'GTIP değiştirildi' not found in ACIKLAMAILGUMRUK area.");
-                // Set "EE" as the sole value
-                explanationArea.value = 'EE';
-                console.log("ACIKLAMAILGUMRUK field set to 'EE'.");
-            }
-
-            // Trigger change event
-            explanationArea.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-            console.log("ACIKLAMAILGUMRUK field not found or disabled.");
-        }
-    }
-
     // Wait for the page to fully load
     window.addEventListener('load', function() {
         console.log("Page fully loaded.");
         createButtons();
-        try {
-            autofillCaptcha();
-        } catch (e) {
-            console.log("Captcha autofill error:", e);
-        }
-        updateFields();
     });
-
-    // Additional check to ensure elements are available
-    function waitForElements() {
-        const dateInput = document.querySelector('input[mo\\:name="KONTROLTARIHI"]');
-        const explanationArea = document.querySelector('textarea[id="ACIKLAMAILGUMRUK"]');
-
-        if (dateInput || explanationArea) {
-            updateFields();
-        } else {
-            setTimeout(waitForElements, 500);
-        }
-    }
-
-    // Start checking for elements after the page has loaded
-    waitForElements();
 })();
