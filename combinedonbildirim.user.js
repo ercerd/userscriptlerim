@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.6
+// @version      2.7
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -257,65 +257,99 @@
         return Array.from(allRows).filter(row => row.offsetParent !== null);
     }
 
-    function copyRowData(visibleRowIndex) {
-        const visibleRows = getVisibleRows();
-        if (visibleRows.length > visibleRowIndex) {
-            const row = visibleRows[visibleRowIndex];
-            const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
+function copyRowData(visibleRowIndex) {
+    const visibleRows = getVisibleRows();
+    if (visibleRows.length > visibleRowIndex) {
+        const row = visibleRows[visibleRowIndex];
+        const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
 
-            let textToCopy = null;
-            // Sondan başlayarak içinde metin olan ilk hücreyi bul
-            for (let i = cells.length - 1; i >= 0; i--) {
-                const cellText = cells[i].textContent.trim();
-                if (cellText) {
-                    textToCopy = cellText;
-                    break;
-                }
+        let textToCopy = null;
+        // Sondan başlayarak içinde metin olan ilk hücreyi bul
+        for (let i = cells.length - 1; i >= 0; i--) {
+            const cellText = cells[i].textContent.trim();
+            if (cellText) {
+                textToCopy = cellText;
+                break;
             }
+        }
 
-            if (textToCopy) {
-                // Check for Clipboard API support (requires secure context - HTTPS)
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(textToCopy).then(function() {
-                        console.log('Kopyalandı:', textToCopy);
-                        alert('Kopyalandı: ' + textToCopy);
-                    }, function(err) {
-                        console.error('Kopyalanamadı (Clipboard API): ', err);
-                        alert('Kopyalanamadı.');
-                    });
-                } else {
-                    // Fallback for non-secure contexts (HTTP) or older browsers
-                    try {
-                        const textArea = document.createElement("textarea");
-                        textArea.value = textToCopy;
-                        // Make the textarea invisible
-                        textArea.style.position = "fixed";
-                        textArea.style.top = "-9999px";
-                        textArea.style.left = "-9999px";
-                        document.body.appendChild(textArea);
-                        textArea.focus();
-                        textArea.select();
-                        const successful = document.execCommand('copy');
-                        document.body.removeChild(textArea);
-
-                        if (successful) {
-                            console.log('Kopyalandı (fallback):', textToCopy);
-                            alert('Kopyalandı: ' + textToCopy);
-                        } else {
-                            throw new Error('Fallback copy command failed.');
-                        }
-                    } catch (err) {
-                        console.error('Kopyalanamadı (fallback exception): ', err);
-                        alert('Kopyalanamadı.');
-                    }
-                }
+        if (textToCopy) {
+            // Check for Clipboard API support (requires secure context - HTTPS)
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(function() {
+                    console.log('Kopyalandı:', textToCopy);
+                    showToast('Kopyalandı: ' + textToCopy);
+                }, function(err) {
+                    console.error('Kopyalanamadı (Clipboard API): ', err);
+                    showToast('Kopyalanamadı.', 'error');
+                });
             } else {
-                alert('Satırda kopyalanacak veri bulunamadı.');
+                // Fallback for non-secure contexts (HTTP) or older browsers
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = textToCopy;
+                    // Make the textarea invisible
+                    textArea.style.position = "fixed";
+                    textArea.style.top = "-9999px";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+
+                    if (successful) {
+                        console.log('Kopyalandı (fallback):', textToCopy);
+                        showToast('Kopyalandı: ' + textToCopy);
+                    } else {
+                        throw new Error('Fallback copy command failed.');
+                    }
+                } catch (err) {
+                    console.error('Kopyalanamadı (fallback exception): ', err);
+                    showToast('Kopyalanamadı.', 'error');
+                }
             }
         } else {
-            alert('İstenen satır bulunamadı (görünür değil veya mevcut değil).');
+            showToast('Satırda kopyalanacak veri bulunamadı.', 'error');
         }
+    } else {
+        showToast('İstenen satır bulunamadı (görünür değil veya mevcut değil).', 'error');
     }
+}
+
+// Toast bildirimleri için yardımcı fonksiyon
+function showToast(message, type = 'success') {
+    // Toast container'ı oluştur
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.bottom = '20px';
+        toastContainer.style.right = '20px';
+        toastContainer.style.zIndex = '10000';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Tek bir toast mesajı oluştur
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.color = '#fff';
+    toast.style.marginBottom = '10px';
+    toast.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    toast.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545'; // Yeşil veya kırmızı arka plan
+
+    // Toast'u ekrana ekle
+    toastContainer.appendChild(toast);
+
+    // Otomatik olarak 3 saniye sonra kaybolmasını sağla
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
 
     // Function to autofill GGBS captcha
     function autofillCaptcha() {
