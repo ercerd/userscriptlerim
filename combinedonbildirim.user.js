@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.12
+// @version      2.13
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
