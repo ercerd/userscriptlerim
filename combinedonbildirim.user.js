@@ -242,6 +242,14 @@
 
         icerikButton.addEventListener('click', function() {
             try {
+                // İçerik kontrolü: "Yüklü Içerik Yok." yazısı var mı?
+                const icerikDosyaElement = document.querySelector('td#ICERIKBELGESIDOSYA');
+                if (icerikDosyaElement && icerikDosyaElement.textContent.trim() === 'Yüklü Içerik Yok.') {
+                    showToast('İçerik bulunmuyor.', 'error');
+                    return; // İşlemi durdur
+                }
+
+                // Eğer içerik varsa, indirme işlemini gerçekleştir
                 const icerikButtonElement = document.querySelector('img[name="Button_icerik_gost"]');
                 if (icerikButtonElement) {
                     icerikButtonElement.click();
@@ -253,7 +261,7 @@
                 showToast('İçerik indirme işlemi başarısız: ' + error.message, 'error');
             }
         });
-
+        
         // Create button for Formu Sıfırla
         const resetButton = document.createElement('button');
         resetButton.innerText = 'Formu Sıfırla';
