@@ -1,20 +1,74 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.15
+// @version      2.16
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
 // @match        http://*/ONBILDIRIM/*
 // @match        https://*/ONBILDIRIM/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
-// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
-// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js  
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js  
 // ==/UserScript==
 
 /* globals jQuery, $, waitForKeyElements */
 
 (function() {
     'use strict';
+
+    // Function to get the previous workday
+    function getPreviousWorkday(date) {
+        var day = date.getDay();
+        if (day === 1) { // If it's Monday
+            date.setDate(date.getDate() - 3); // Go back to Friday
+        } else if (day === 0) { // If it's Sunday
+            date.setDate(date.getDate() - 2); // Go back to Friday
+        } else { // Any other day
+            date.setDate(date.getDate() - 1); // Go back one day
+        }
+        return date;
+    }
+
+    // Function to pad zero to numbers (from the working script)
+    function padZero(num) {
+        return num.toString().padStart(2, '0');
+    }
+
+    // Function to get formatted date (from the working script)
+    function getFormattedDate() {
+        const currentDate = new Date();
+        currentDate.setMinutes(currentDate.getMinutes() + 20);
+
+        const day = padZero(currentDate.getDate());
+        const month = padZero(currentDate.getMonth() + 1);
+        const year = currentDate.getFullYear();
+        const hours = padZero(currentDate.getHours() + 3);
+        const minutes = padZero(currentDate.getMinutes());
+        const seconds = padZero(currentDate.getSeconds());
+
+        return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}.0`;
+    }
+
+    // Function to reset form fields
+    function resetFormFields() {
+        const formElements = document.querySelectorAll('input, select, textarea');
+        formElements.forEach(element => {
+            if (element.offsetParent !== null) { // Check if element is visible
+                if (element.tagName === 'INPUT') {
+                    if (element.type === 'text' || element.type === 'number' || element.type === 'date' || element.type === 'time') {
+                        element.value = '';
+                    } else if (element.type === 'checkbox' || element.type === 'radio') {
+                        element.checked = false;
+                    }
+                } else if (element.tagName === 'SELECT') {
+                    element.selectedIndex = 0;
+                } else if (element.tagName === 'TEXTAREA') {
+                    element.value = '';
+                }
+            }
+        });
+        console.log('Tüm görünür form alanları sıfırlandı.');
+    }
 
     // Toast bildirimleri için yardımcı fonksiyon
     function showToast(message, type = 'success') {
@@ -37,7 +91,7 @@
         toast.style.color = '#fff';
         toast.style.marginBottom = '10px';
         toast.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-        toast.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545';
+        toast.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545'; // Yeşil veya kırmızı arka plan
 
         toastContainer.appendChild(toast);
 
@@ -81,11 +135,19 @@
         urunHamButton.addEventListener('click', function() {
             try {
                 resetFormFields();
-                document.getElementById('ONAYDURUM').value = '4';
-                document.getElementById('ORGANIZASYONREF').value = '24';
-                showToast('Ürün_Ham işlemi başarıyla tamamlandı.', 'success');
+
+                const onayDurum = document.getElementById('ONAYDURUM');
+                const organizasyonRef = document.getElementById('ORGANIZASYONREF');
+
+                if (onayDurum && organizasyonRef) {
+                    onayDurum.value = '4';
+                    organizasyonRef.value = '24';
+                    showToast('Ürün_Ham veri girişi yapıldı.', 'success');
+                } else {
+                    throw new Error('Gerekli alanlar bulunamadı.');
+                }
             } catch (error) {
-                showToast('Ürün_Ham işlemi başarısız.', 'error');
+                showToast('Ürün_Ham işlemi başarısız: Alanlar bulunamadı.', 'error');
             }
         });
 
@@ -103,30 +165,43 @@
         sevkiyatHamButton.addEventListener('click', function() {
             try {
                 resetFormFields();
-                document.getElementById('ONAYDURUM').value = '1';
 
-                const checkbox = document.getElementById('ALTGRUP_GUMRUK');
-                if (!checkbox.checked) {
-                    checkbox.click();
-                }
-
+                const onayDurum = document.getElementById('ONAYDURUM');
+                const altGrupGumruk = document.getElementById('ALTGRUP_GUMRUK');
                 const gumrukAdi = document.getElementById('GUMRUKADI');
-                gumrukAdi.value = '24';
-                gumrukAdi.dispatchEvent(new Event('change', { bubbles: true }));
-
                 const gumrukTarihSecenek = document.getElementById('GUMRUKTARIHBSECENEK');
-                gumrukTarihSecenek.value = '3';
-                gumrukTarihSecenek.dispatchEvent(new Event('change', { bubbles: true }));
-
-                const date = getPreviousWorkday(new Date());
-                const formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()} 00:00:00.0`;
                 const gumrukTarihB1 = document.getElementById('GUMRUKTARIHB1');
-                gumrukTarihB1.value = formattedDate;
-                gumrukTarihB1.dispatchEvent(new Event('change', { bubbles: true }));
 
-                showToast('Sevkiyat_Ham işlemi başarıyla tamamlandı.', 'success');
+                if (
+                    onayDurum &&
+                    altGrupGumruk &&
+                    gumrukAdi &&
+                    gumrukTarihSecenek &&
+                    gumrukTarihB1
+                ) {
+                    onayDurum.value = '1';
+
+                    if (!altGrupGumruk.checked) {
+                        altGrupGumruk.click();
+                    }
+
+                    gumrukAdi.value = '24';
+                    gumrukAdi.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    gumrukTarihSecenek.value = '3';
+                    gumrukTarihSecenek.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    const date = getPreviousWorkday(new Date());
+                    const formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()} 00:00:00.0`;
+                    gumrukTarihB1.value = formattedDate;
+                    gumrukTarihB1.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    showToast('Sevkiyat_Ham veri girişi yapıldı.', 'success');
+                } else {
+                    throw new Error('Gerekli alanlar bulunamadı.');
+                }
             } catch (error) {
-                showToast('Sevkiyat_Ham işlemi başarısız.', 'error');
+                showToast('Sevkiyat_Ham işlemi başarısız: Alanlar bulunamadı.', 'error');
             }
         });
 
@@ -146,12 +221,12 @@
                 const sertifikaButtonElement = document.querySelector('img[name="Button_Sertifika_gost"]');
                 if (sertifikaButtonElement) {
                     sertifikaButtonElement.click();
-                    showToast('Sertifika indirme işlemi başarıyla başlatıldı.', 'success');
+                    showToast('Sertifika indirme işlemi başlatıldı.', 'success');
                 } else {
                     throw new Error('Sertifika butonu bulunamadı.');
                 }
             } catch (error) {
-                showToast('Sertifika indirme işlemi başarısız.', 'error');
+                showToast('Sertifika indirme işlemi başarısız: ' + error.message, 'error');
             }
         });
 
@@ -168,15 +243,21 @@
 
         icerikButton.addEventListener('click', function() {
             try {
+                const icerikDosyaElement = document.querySelector('td#ICERIKBELGESIDOSYA');
+                if (icerikDosyaElement && icerikDosyaElement.textContent.trim() === 'Yüklü Içerik Yok.') {
+                    showToast('İçerik bulunmuyor.', 'error');
+                    return; // İşlemi durdur
+                }
+
                 const icerikButtonElement = document.querySelector('img[name="Button_icerik_gost"]');
                 if (icerikButtonElement) {
                     icerikButtonElement.click();
-                    showToast('İçerik indirme işlemi başarıyla başlatıldı.', 'success');
+                    showToast('İçerik indirme işlemi başlatıldı.', 'success');
                 } else {
                     throw new Error('İçerik butonu bulunamadı.');
                 }
             } catch (error) {
-                showToast('İçerik indirme işlemi başarısız.', 'error');
+                showToast('İçerik indirme işlemi başarısız: ' + error.message, 'error');
             }
         });
 
@@ -196,7 +277,7 @@
                 resetFormFields();
                 showToast('Form sıfırlandı.', 'success');
             } catch (error) {
-                showToast('Form sıfırlama işlemi başarısız.', 'error');
+                showToast('Form sıfırlama işlemi başarısız: ' + error.message, 'error');
             }
         });
 
@@ -225,37 +306,66 @@
         numberContainer.style.marginTop = '5px';
         copyContainer.appendChild(numberContainer);
 
-        // Butonları sadece görünür satırlar için oluştur
-        const visibleRows = getVisibleRows();
-        visibleRows.forEach((row, index) => {
-            const firstCell = row.querySelector('tr > td[class*="Link1"]');
-            if (firstCell) {
-                const rowNum = parseInt(firstCell.innerText, 10);
-                if (!isNaN(rowNum)) {
-                    const numButton = document.createElement('button');
-                    numButton.innerText = rowNum;
-                    numButton.style.padding = '5px 10px';
-                    numButton.style.backgroundColor = '#6c757d';
-                    numButton.style.color = 'white';
-                    numButton.style.border = 'none';
-                    numButton.style.borderRadius = '3px';
-                    numButton.style.cursor = 'pointer';
-                    numButton.style.minWidth = '30px';
-                    numberContainer.appendChild(numButton);
+        // Function to create ID copy buttons dynamically
+        function createIdCopyButtons() {
+            // Clear existing buttons
+            numberContainer.innerHTML = '';
 
-                    numButton.addEventListener('click', function() {
-                        copyRowData(index); // Görünür satırın index'ini gönder
-                    });
+            // Get visible rows and create buttons for each row
+            const visibleRows = getVisibleRows();
+            visibleRows.forEach((row, index) => {
+                const firstCell = row.querySelector('tr > td[class*="Link1"]');
+                if (firstCell) {
+                    const rowNum = parseInt(firstCell.innerText, 10);
+                    if (!isNaN(rowNum)) {
+                        const numButton = document.createElement('button');
+                        numButton.innerText = rowNum;
+                        numButton.style.padding = '5px 10px';
+                        numButton.style.backgroundColor = '#6c757d';
+                        numButton.style.color = 'white';
+                        numButton.style.border = 'none';
+                        numButton.style.borderRadius = '3px';
+                        numButton.style.cursor = 'pointer';
+                        numButton.style.minWidth = '30px';
+                        numberContainer.appendChild(numButton);
+
+                        numButton.addEventListener('click', function() {
+                            copyRowData(index); // Görünür satırın index'ini gönder
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
+
+        // Initial creation of ID copy buttons
+        createIdCopyButtons();
+
+        // Use MutationObserver to detect changes in the table and update buttons
+        const observerTarget = document.querySelector('table[mo\\:type="ProcessRecord"]');
+        if (observerTarget) {
+            const observer = new MutationObserver(() => {
+                console.log("Tablo içeriği değişti. ID kopyala butonları yeniden oluşturuluyor...");
+                createIdCopyButtons();
+            });
+
+            // Observe changes in child nodes or attributes
+            observer.observe(observerTarget, {
+                childList: true,
+                subtree: true,
+                attributes: true
+            });
+        } else {
+            console.warn("Hedef tablo bulunamadı. ID kopyala butonları oluşturulamıyor.");
+        }
     }
 
+    // Function to get visible rows
     function getVisibleRows() {
         const allRows = document.querySelectorAll('table[mo\\:type="ProcessRecord"]');
         return Array.from(allRows).filter(row => row.offsetParent !== null);
     }
 
+    // Function to copy row data
     function copyRowData(visibleRowIndex) {
         const visibleRows = getVisibleRows();
         if (visibleRows.length > visibleRowIndex) {
@@ -287,7 +397,6 @@
                     try {
                         const textArea = document.createElement("textarea");
                         textArea.value = textToCopy;
-                        // Make the textarea invisible
                         textArea.style.position = "fixed";
                         textArea.style.top = "-9999px";
                         textArea.style.left = "-9999px";
@@ -316,88 +425,9 @@
         }
     }
 
-    // Function to autofill GGBS captcha
-    function autofillCaptcha() {
-        const atr1a = document.getElementById("image1").outerHTML.slice(78, 79);
-        const atr11 = atr1a === '0' ? 'r' : atr1a;
-
-        const atr = document.getElementById("image2").outerHTML.slice(78, 79);
-        const atr22 = atr === '0' ? 'r' : atr;
-
-        const atr3 = document.getElementById("image3").outerHTML.slice(78, 79);
-        const atr33 = atr3 === '0' ? 'r' : atr3;
-
-        const atr4 = document.getElementById("image4").outerHTML.slice(78, 79);
-        const atr44 = atr4 === '0' ? 'r' : atr4;
-
-        const erccaptcha = atr11 + atr22 + atr33 + atr44;
-        $("#kulkont1").val(erccaptcha);
-    }
-
-    // Function to update KONTROLTARIHI and ACIKLAMAILGUMRUK fields
-    function updateFields() {
-        const dateInput = document.querySelector('input[mo\\:name="KONTROLTARIHI"]');
-        const explanationArea = document.querySelector('textarea[id="ACIKLAMAILGUMRUK"]');
-
-        if (dateInput && !dateInput.disabled) {
-            console.log("KONTROLTARIHI field found and enabled:", dateInput);
-            const newDateValue = getFormattedDate();
-            console.log("Setting new KONTROLTARIHI value:", newDateValue);
-            dateInput.value = newDateValue;
-            console.log("KONTROLTARIHI field updated successfully.");
-            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-            console.log("KONTROLTARIHI field not found or disabled.");
-        }
-
-        if (explanationArea && !explanationArea.disabled) {
-            console.log("ACIKLAMAILGUMRUK area found and enabled:", explanationArea);
-
-            if (explanationArea.value.includes("GTIP değiştirildi")) {
-                console.log("Text 'GTIP değiştirildi' found in ACIKLAMAILGUMRUK area.");
-                const lines = explanationArea.value.split('\n');
-                if (lines.length > 1) {
-                    lines[1] = 'EE';
-                } else {
-                    lines.push('EE');
-                }
-                explanationArea.value = lines.join('\n');
-                console.log("ACIKLAMAILGUMRUK field updated with 'EE' on the second line.");
-            } else {
-                console.log("Text 'GTIP değiştirildi' not found in ACIKLAMAILGUMRUK area.");
-                explanationArea.value = 'EE';
-                console.log("ACIKLAMAILGUMRUK field set to 'EE'.");
-            }
-
-            explanationArea.dispatchEvent(new Event('change', { bubbles: true }));
-        } else {
-            console.log("ACIKLAMAILGUMRUK field not found or disabled.");
-        }
-    }
-
     // Wait for the page to fully load
     window.addEventListener('load', function() {
         console.log("Page fully loaded.");
         createButtons();
-        try {
-            autofillCaptcha();
-        } catch (e) {
-            console.log("Captcha autofill error:", e);
-        }
-        updateFields();
     });
-
-    // Additional check to ensure elements are available
-    function waitForElements() {
-        const dateInput = document.querySelector('input[mo\\:name="KONTROLTARIHI"]');
-        const explanationArea = document.querySelector('textarea[id="ACIKLAMAILGUMRUK"]');
-
-        if (dateInput || explanationArea) {
-            updateFields();
-        } else {
-            setTimeout(waitForElements, 500);
-        }
-    }
-
-    waitForElements();
 })();
