@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.13
+// @version      2.14
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -307,32 +307,58 @@
         numberContainer.style.marginTop = '5px';
         copyContainer.appendChild(numberContainer);
 
-        // Butonları sadece görünür satırlar için oluştur
-        const visibleRows = getVisibleRows();
-        visibleRows.forEach((row, index) => {
-            const firstCell = row.querySelector('tr > td[class*="Link1"]');
-            if (firstCell) {
-                const rowNum = parseInt(firstCell.innerText, 10);
-                if (!isNaN(rowNum)) {
-                    const numButton = document.createElement('button');
-                    numButton.innerText = rowNum;
-                    numButton.style.padding = '5px 10px';
-                    numButton.style.backgroundColor = '#6c757d';
-                    numButton.style.color = 'white';
-                    numButton.style.border = 'none';
-                    numButton.style.borderRadius = '3px';
-                    numButton.style.cursor = 'pointer';
-                    numButton.style.minWidth = '30px';
-                    numberContainer.appendChild(numButton);
+        // Function to create ID copy buttons dynamically
+        function createIdCopyButtons() {
+            // Clear existing buttons
+            numberContainer.innerHTML = '';
 
-                    numButton.addEventListener('click', function() {
-                        copyRowData(index); // Görünür satırın index'ini gönder
-                    });
+            // Get visible rows and create buttons for each row
+            const visibleRows = getVisibleRows();
+            visibleRows.forEach((row, index) => {
+                const firstCell = row.querySelector('tr > td[class*="Link1"]');
+                if (firstCell) {
+                    const rowNum = parseInt(firstCell.innerText, 10);
+                    if (!isNaN(rowNum)) {
+                        const numButton = document.createElement('button');
+                        numButton.innerText = rowNum;
+                        numButton.style.padding = '5px 10px';
+                        numButton.style.backgroundColor = '#6c757d';
+                        numButton.style.color = 'white';
+                        numButton.style.border = 'none';
+                        numButton.style.borderRadius = '3px';
+                        numButton.style.cursor = 'pointer';
+                        numButton.style.minWidth = '30px';
+                        numberContainer.appendChild(numButton);
+
+                        numButton.addEventListener('click', function() {
+                            copyRowData(index); // Görünür satırın index'ini gönder
+                        });
+                    }
                 }
-            }
-        });
-    }
+            });
+        }
 
+        // Initial creation of ID copy buttons
+        createIdCopyButtons();
+
+        // Use MutationObserver to detect changes in the table and update buttons
+        const observerTarget = document.querySelector('table[mo\\:type="ProcessRecord"]');
+        if (observerTarget) {
+            const observer = new MutationObserver(() => {
+                console.log("Tablo içeriği değişti. ID kopyala butonları yeniden oluşturuluyor...");
+                createIdCopyButtons();
+            });
+
+            // Observe changes in child nodes or attributes
+            observer.observe(observerTarget, {
+                childList: true,
+                subtree: true,
+                attributes: true
+            });
+        } else {
+            console.warn("Hedef tablo bulunamadı. ID kopyala butonları oluşturulamıyor.");
+        }
+        
     // Wait for the page to fully load
     window.addEventListener('load', function() {
         console.log("Page fully loaded.");
