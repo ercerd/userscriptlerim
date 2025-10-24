@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGBS AnaMenu Sidebar (Modern Paste Test)
 // @namespace    http://tampermonkey.net/
-// @version      1.23
+// @version      1.24
 // @description  Adds a sidebar with buttons to select specific values from dropdowns in any iframe and click a specific button (Test file for modern paste)
 // @author       Your Name
 // @match        http://172.20.20.103/cis/servlet/StartCISPage?PAGEURL=/FSIS/ggbs.giris.html&POPUPTITLE=AnaMenu
