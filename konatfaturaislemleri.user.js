@@ -8,6 +8,8 @@
 // @grant        GM_setClipboard
 // @require      https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
 // ==/UserScript==
 
 (function () {
