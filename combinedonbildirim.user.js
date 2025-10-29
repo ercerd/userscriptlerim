@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.17
+// @version      2.18
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -146,7 +146,7 @@
         if (explanationArea && !explanationArea.disabled) {
             console.log("ACIKLAMAILGUMRUK area found and enabled:", explanationArea);
 
-            if (explanationArea.value.includes("GTIP değiştirildi")) {
+            if (explanationArea.value.includes("GTİP değiştirildi")) {
                 console.log("Text 'GTIP değiştirildi' found in ACIKLAMAILGUMRUK area.");
                 const lines = explanationArea.value.split('\n');
                 if (lines.length > 1) {
