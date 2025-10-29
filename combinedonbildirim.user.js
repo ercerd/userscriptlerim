@@ -357,8 +357,8 @@
         if (explanationArea && !explanationArea.disabled) {
             console.log("ACIKLAMAILGUMRUK area found and enabled:", explanationArea);
 
-            if (explanationArea.value.includes("GTIP değiştirildi")) {
-                console.log("Text 'GTIP değiştirildi' found in ACIKLAMAILGUMRUK area.");
+            if (explanationArea.value.includes("GTİP değiştirildi")) {
+                console.log("Text 'GTİP değiştirildi' found in ACIKLAMAILGUMRUK area.");
                 // Insert "EE" on the second line
                 const lines = explanationArea.value.split('\n');
                 if (lines.length > 1) {
