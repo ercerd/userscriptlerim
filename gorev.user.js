@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Advanced Form Filler for gorev_add.php
 // @namespace    http://212.174.41.133/
-// @version      1.7
-// @description  Multiselect destekli form doldurma işlemi yapar
+// @version      2.1
+// @description  Multiselect destekli form doldurma işlemi yapar (Tam Eşleşme)
 // @match        http://212.174.41.133/gorev/gorev_add.php
 // @match        http://10.33.0.60/gorev/gorev_add.php
 // @grant        GM_addStyle
@@ -45,10 +45,6 @@
         .custom-form-button:active {
             transform: translateY(1px);
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        .custom-form-button i {
-            font-size: 16px;
         }
 
         .success-animation {
@@ -106,24 +102,32 @@
             transform: translateY(1px);
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
+
+        .status-message {
+            position: fixed;
+            top: 110px;
+            right: 10px;
+            z-index: 999;
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: Arial, sans-serif;
+            max-width: 250px;
+            word-wrap: break-word;
+        }
     `);
 
-    // Buton oluşturma
+    // Butonları oluştur
     const button = document.createElement('button');
     button.className = 'custom-form-button';
-    button.innerHTML = `
-        <i class="fa fa-magic"></i>
-        <span>Formu Doldur</span>
-    `;
+    button.innerHTML = `<i class="fa fa-magic"></i><span>Formu Doldur</span>`;
     document.body.appendChild(button);
 
-    // Temizle butonu oluşturma
     const clearButton = document.createElement('button');
     clearButton.className = 'custom-clear-button';
-    clearButton.innerHTML = `
-        <i class="fa fa-trash"></i>
-        <span>Temizle</span>
-    `;
+    clearButton.innerHTML = `<i class="fa fa-trash"></i><span>Temizle</span>`;
     document.body.appendChild(clearButton);
 
     // Font Awesome ekleme
@@ -132,102 +136,230 @@
     fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
     document.head.appendChild(fontAwesome);
 
-    // Butona tıklanınca işlemleri gerçekleştirecek
-    button.addEventListener('click', async () => {
-        try {
-            // Yükleniyor animasyonu
-            const originalContent = button.innerHTML;
-            button.innerHTML = `
-                <div class="loading-spinner"></div>
-                <span>Dolduruluyor...</span>
-            `;
-            button.disabled = true;
+    // Durum mesajı gösterme fonksiyonu
+    function showStatusMessage(message) {
+        let statusDiv = document.querySelector('.status-message');
+        if (!statusDiv) {
+            statusDiv = document.createElement('div');
+            statusDiv.className = 'status-message';
+            document.body.appendChild(statusDiv);
+        }
+        statusDiv.textContent = message;
+        statusDiv.style.display = 'block';
+        console.log('Status:', message);
+    }
 
-            // 1. "value_subesi_1" -> "GIDA VE YEM" seçimi
+    function hideStatusMessage() {
+        const statusDiv = document.querySelector('.status-message');
+        if (statusDiv) {
+            statusDiv.style.display = 'none';
+        }
+    }
+
+    // Seçeneklerin yüklenmesini bekleyen fonksiyon
+    async function waitForOptions(selectElement, minOptions = 1, timeout = 5000) {
+        const startTime = Date.now();
+        return new Promise((resolve, reject) => {
+            const checkInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const optionCount = selectElement.options.length;
+                
+                // Seçenekler yüklendiyse
+                if (optionCount >= minOptions) {
+                    clearInterval(checkInterval);
+                    console.log(`✓ Seçenekler yüklendi: ${optionCount} adet`);
+                    resolve(true);
+                }
+                
+                // Zaman aşımı kontrolü
+                if (elapsed >= timeout) {
+                    clearInterval(checkInterval);
+                    console.warn(`⚠ Zaman aşımı: ${selectElement.id} için seçenekler yüklenemedi`);
+                    reject(new Error(`Seçenekler yüklenemedi: ${selectElement.id}`));
+                }
+            }, 200);
+        });
+    }
+
+    // Change event'i tetikle ve işlemin tamamlanmasını bekle
+    async function triggerChangeAndWait(element, waitTime = 500) {
+        // Farklı event türlerini tetikle
+        const events = ['change', 'input', 'blur'];
+        events.forEach(eventType => {
+            const event = new Event(eventType, { bubbles: true });
+            element.dispatchEvent(event);
+        });
+        
+        // jQuery event'i varsa onu da tetikle
+        if (typeof $ !== 'undefined' && $(element).length) {
+            $(element).trigger('change');
+        }
+        
+        // Belirtilen süre kadar bekle
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+
+    // Chosen.js destekli tekli seçim için geliştirilmiş fonksiyon
+    async function setChosenOption(selectElement, value, description = '') {
+        if (!selectElement || !selectElement.options) {
+            throw new Error(`Seçim alanı bulunamadı: ${description}`);
+        }
+
+        // TAM EŞLEŞME için düzeltilmiş arama
+        const option = Array.from(selectElement.options).find(opt => {
+            const optionText = opt.text.trim();
+            const optionValue = opt.value.trim();
+            return optionText === value || optionValue === value;
+        });
+        
+        if (!option) {
+            console.warn(`⚠ Seçenek bulunamadı: "${value}" in ${description || selectElement.id}`);
+            throw new Error(`Seçenek bulunamadı: ${value}`);
+        }
+
+        option.selected = true;
+        
+        // Chosen.js güncellemesi
+        if (typeof $ !== 'undefined' && $(selectElement).data('chosen')) {
+            $(selectElement).trigger('chosen:updated');
+        }
+        
+        console.log(`✓ Seçildi: ${value} - ${description}`);
+        return true;
+    }
+
+    // Chosen.js destekli çoklu seçim için geliştirilmiş fonksiyon - TAM EŞLEŞME
+    async function setChosenOptions(selectElement, values, description = '') {
+        if (!selectElement || !selectElement.options) {
+            throw new Error(`Seçim alanı bulunamadı: ${description}`);
+        }
+
+        let selectedCount = 0;
+        Array.from(selectElement.options).forEach(option => {
+            const optionText = option.text.trim();
+            const optionValue = option.value.trim();
+            
+            // TAM EŞLEŞME kontrolü (includes yerine === kullan)
+            const shouldSelect = values.some(value => 
+                optionText === value || optionValue === value
+            );
+            
+            if (shouldSelect) {
+                option.selected = true;
+                selectedCount++;
+                console.log(`✓ Seçildi: ${option.text}`);
+            } else {
+                option.selected = false; // Diğerlerini temizle
+            }
+        });
+
+        if (selectedCount === 0) {
+            console.warn(`⚠ Hiçbir seçenek bulunamadı: ${values.join(', ')} in ${description || selectElement.id}`);
+        }
+
+        // Chosen.js güncellemesi
+        if (typeof $ !== 'undefined' && $(selectElement).data('chosen')) {
+            $(selectElement).trigger('chosen:updated');
+        }
+
+        console.log(`✓ ${selectedCount} seçenek işaretlendi - ${description}`);
+        return selectedCount > 0;
+    }
+
+    // ANA DOLDURMA FONKSİYONU
+    button.addEventListener('click', async () => {
+        const originalContent = button.innerHTML;
+        button.innerHTML = `<div class="loading-spinner"></div><span>Dolduruluyor...</span>`;
+        button.disabled = true;
+
+        try {
+            // ADIM 1: Şube seçimi
+            showStatusMessage('1/9: Şube seçiliyor...');
             const subeSelect = document.getElementById('value_subesi_1');
             if (subeSelect) {
                 subeSelect.value = 'GIDA VE YEM';
-                console.log('Seçildi: GIDA VE YEM');
+                await triggerChangeAndWait(subeSelect, 300);
             }
 
-            // 2. "value_gorev_yeri_ilce_1" -> "Akdeniz" seçimi
+            // ADIM 2: İlçe seçimi (ÖNEMLİ: Köy/Mahalle için bağımlı alan)
+            showStatusMessage('2/9: İlçe seçiliyor...');
             const ilceSelect = document.getElementById('value_gorev_yeri_ilce_1');
-            if (ilceSelect) {
-                setChosenOption(ilceSelect, 'Akdeniz');
-                console.log('Seçildi: Akdeniz');
-                // İlçe değişikliğini tetikle ve köy/mahalle listesinin yüklenmesini bekle
-                $(ilceSelect).trigger('change');
-                await new Promise(resolve => setTimeout(resolve, 100)); // İlçe değişikliği sonrası bekleme süresi
-            }
+            if (!ilceSelect) throw new Error('İlçe seçim alanı bulunamadı');
+            
+            await setChosenOption(ilceSelect, 'Akdeniz', 'İlçe');
+            await triggerChangeAndWait(ilceSelect, 800); // Daha uzun bekleme süresi
 
-            // 3. "value_gorev_yeri_koy_mah_1" çoklu seçim
+            // ADIM 3: Köy/Mahalle seçimi (İlçeye bağımlı)
+            showStatusMessage('3/9: Köy/Mahalle seçiliyor...');
             const koyMahSelect = document.getElementById('value_gorev_yeri_koy_mah_1');
             if (koyMahSelect) {
-                // Köy/mahalle seçeneklerinin yüklenmesini bekle
-                await waitForOptions(koyMahSelect);
-
-                // Seçenekleri ayarla
-                const valuesToSelect = ['Yeni', 'Bekirde', 'Homurlu'];
-                for (const value of valuesToSelect) {
-                    const option = Array.from(koyMahSelect.options).find(opt => opt.text.includes(value));
-                    if (option) {
-                        option.selected = true;
-                    }
+                try {
+                    await waitForOptions(koyMahSelect, 3, 5000); // En az 3 seçenek, 5 saniye timeout
+                    await new Promise(resolve => setTimeout(resolve, 300)); // Ekstra stabilizasyon
+                    
+                    const valuesToSelect = ['Yeni', 'Bekirde', 'Homurlu'];
+                    await setChosenOptions(koyMahSelect, valuesToSelect, 'Köy/Mahalle');
+                } catch (error) {
+                    console.error('Köy/Mahalle seçimi başarısız:', error);
+                    showStatusMessage('⚠ Köy/Mahalle yüklenemedi, devam ediliyor...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
-
-                // Chosen.js güncellemesini tetikle
-                $(koyMahSelect).trigger('chosen:updated');
-                console.log('Köy/Mahalle seçimleri yapıldı');
             }
 
-            // 4. "value_tarih_1" -> Günün tarihini ayarlama
+            // ADIM 4: Tarih
+            showStatusMessage('4/9: Tarih ayarlanıyor...');
             const tarihInput = document.getElementById('value_tarih_1');
             if (tarihInput) {
                 const today = new Date();
-                const formattedDate = today.toLocaleDateString('tr-TR').replace(/\./g, '.');
-                tarihInput.value = formattedDate;
+                const day = String(today.getDate()).padStart(2, '0');
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const year = today.getFullYear();
+                tarihInput.value = `${day}.${month}.${year}`;
             }
 
-            // 5. "value_konusu_1" -> "GIDA İTHALAT-İHRACAT" seçimi
+            // ADIM 5: Konu
+            showStatusMessage('5/9: Konu seçiliyor...');
             const konusuSelect = document.getElementById('value_konusu_1');
             if (konusuSelect) {
-                setChosenOption(konusuSelect, 'GIDA İTHALAT-İHRACAT');
+                await setChosenOption(konusuSelect, 'GIDA İTHALAT-İHRACAT', 'Konu');
+                await triggerChangeAndWait(konusuSelect, 300);
             }
 
-            // 6. "value_gorev_durumu_1" çoklu seçim
+            // ADIM 6: Görev Durumu
+            showStatusMessage('6/9: Görev durumu seçiliyor...');
             const gorevDurumuSelect = document.getElementById('value_gorev_durumu_1');
             if (gorevDurumuSelect) {
-                setChosenOptions(gorevDurumuSelect, ['arazi', 'kontrol', 'özel']);
+                await setChosenOptions(gorevDurumuSelect, ['arazi', 'kontrol', 'özel'], 'Görev Durumu');
             }
 
-            // 7. "type_goreve_giden_1" -> "Ercan ERDEN-Mühendis" seçimi
+            // ADIM 7: Göreve Giden
+            showStatusMessage('7/9: Personel seçiliyor...');
             const goreveGidenSelect = document.getElementById('value_goreve_giden_1');
             if (goreveGidenSelect) {
-                setChosenOption(goreveGidenSelect, 'Ercan ERDEN-Mühendis');
+                await setChosenOption(goreveGidenSelect, 'Ercan ERDEN-Mühendis', 'Göreve Giden');
             }
 
-            // 8. "value_oncelik_1" -> "Tam Gün" seçimi
+            // ADIM 8: Öncelik
+            showStatusMessage('8/9: Öncelik ayarlanıyor...');
             const oncelikSelect = document.getElementById('value_oncelik_1');
             if (oncelikSelect) {
                 oncelikSelect.value = 'Tam Gün';
+                await triggerChangeAndWait(oncelikSelect, 200);
             }
 
-            // 9. "value_arac_tipi_1" -> "Otomobil" seçimi
+            // ADIM 9: Araç Tipi
+            showStatusMessage('9/9: Araç tipi seçiliyor...');
             const aracTipiSelect = document.getElementById('value_arac_tipi_1');
             if (aracTipiSelect) {
                 aracTipiSelect.value = 'Otomobil';
             }
 
-             // İşlem başarılı animasyonu
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Minimum görünme süresi
-            button.innerHTML = `
-                <i class="fas fa-check"></i>
-                <span>Tamamlandı!</span>
-            `;
+            // Başarı mesajı
+            hideStatusMessage();
+            button.innerHTML = `<i class="fas fa-check"></i><span>Tamamlandı!</span>`;
             button.style.background = 'linear-gradient(45deg, #4CAF50, #388E3C)';
             button.classList.add('success-animation');
 
-            // 3 saniye sonra butonu eski haline döndür
             setTimeout(() => {
                 button.innerHTML = originalContent;
                 button.style.background = '';
@@ -236,29 +368,23 @@
             }, 3000);
 
         } catch (error) {
-            console.error('Bir hata oluştu:', error);
-            button.innerHTML = `
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>Hata Oluştu!</span>
-            `;
+            console.error('Form doldurma hatası:', error);
+            hideStatusMessage();
+            button.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>Hata: ${error.message}</span>`;
             button.style.background = 'linear-gradient(45deg, #f44336, #d32f2f)';
 
-            // 3 saniye sonra butonu eski haline döndür
             setTimeout(() => {
                 button.innerHTML = originalContent;
                 button.style.background = '';
                 button.disabled = false;
-            }, 3000);
+            }, 5000);
         }
     });
 
-    // Temizle butonuna tıklanınca işlemleri gerçekleştirecek
+    // Temizle butonu
     clearButton.addEventListener('click', async () => {
         const originalContent = clearButton.innerHTML;
-        clearButton.innerHTML = `
-            <div class="loading-spinner"></div>
-            <span>Temizleniyor...</span>
-        `;
+        clearButton.innerHTML = `<div class="loading-spinner"></div><span>Temizleniyor...</span>`;
         clearButton.disabled = true;
 
         try {
@@ -267,7 +393,7 @@
             for (const element of formElements) {
                 if (element.tagName === 'SELECT') {
                     element.selectedIndex = -1;
-                    if ($(element).data('chosen')) {
+                    if (typeof $ !== 'undefined' && $(element).data('chosen')) {
                         $(element).trigger('chosen:updated');
                     }
                 } else if (element.type === 'checkbox' || element.type === 'radio') {
@@ -277,20 +403,13 @@
                 }
             }
 
-            clearButton.innerHTML = `
-                <i class="fas fa-check"></i>
-                <span>Temizlendi!</span>
-            `;
+            clearButton.innerHTML = `<i class="fas fa-check"></i><span>Temizlendi!</span>`;
             clearButton.style.background = 'linear-gradient(45deg, #4CAF50, #388E3C)';
             clearButton.classList.add('success-animation');
 
         } catch (error) {
             console.error('Form temizleme hatası:', error);
-            clearButton.innerHTML = `
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>Hata!</span>
-            `;
-            clearButton.style.background = 'linear-gradient(45deg, #f44336, #d32f2f)';
+            clearButton.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>Hata!</span>`;
         }
 
         setTimeout(() => {
@@ -300,46 +419,4 @@
             clearButton.classList.remove('success-animation');
         }, 3000);
     });
-
-    // Chosen.js destekli tekli seçim için yardımcı fonksiyon
-    function setChosenOption(selectElement, value) {
-        if (selectElement.options) {
-            const option = Array.from(selectElement.options).find(opt =>
-                opt.value === value || opt.text.includes(value)
-            );
-            if (option) {
-                option.selected = true;
-                $(selectElement).trigger('chosen:updated');
-            }
-        }
-    }
-
-    // Chosen.js destekli çoklu seçim için yardımcı fonksiyon
-    function setChosenOptions(selectElement, values) {
-        if (selectElement.options) {
-            Array.from(selectElement.options).forEach(option => {
-                option.selected = values.some(value =>
-                    option.value === value || option.text.includes(value)
-                );
-            });
-            $(selectElement).trigger('chosen:updated');
-        }
-    }
-
-    // Seçeneklerin yüklenmesini bekleyen yardımcı fonksiyon
-    function waitForOptions(selectElement) {
-        return new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 10;
-            const interval = setInterval(() => {
-                if (selectElement.options.length > 0) {
-                    clearInterval(interval);
-                    resolve();
-                } else if (++attempts >= maxAttempts) {
-                    clearInterval(interval);
-                    reject(new Error('Seçenekler yüklenemedi'));
-                }
-            }, 300);
-        });
-    }
 })();
