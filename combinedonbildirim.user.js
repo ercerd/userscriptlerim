@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.19
+// @version      2.191
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -22,7 +22,7 @@
     function getPreviousWorkday(date) {
         var day = date.getDay();
         if (day === 1) { // If it's Monday
-            date.setDate(date.getDate() - 2); // Go back to Friday
+            date.setDate(date.getDate() - 0); // Go back to Friday
         } else if (day === 0) { // If it's Sunday
             date.setDate(date.getDate() - 1); // Go back to Friday
         } else { // Any other day
