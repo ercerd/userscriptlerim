@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Fatura İşlemleri (Tarih Seçmeli + PDF Bazlı + Durdurma Korumalı + Tarayıcı İçi Birleştirme)
 // @namespace    http://tampermonkey.net/
-// @version      3.2
+// @version      3.3
 // @description  PDF indir, onayla, linkleri kopyala ve tarayıcıda birleştir (ArrayBuffer hatası düzeltildi)
 // @match        https://konat.net.tr/dss33/v33/index.php?tpage=islemdeki-belgeler*
 // @grant        GM_addStyle
@@ -281,7 +281,7 @@
         const t1 = startDateInput.value || '';
         const t2 = endDateInput.value || '';
 
-        const links = document.querySelectorAll('a[href*="../e-fatura/giden_pdf.php?fno="]');
+        const links = document.querySelectorAll('a[href*="../e-fatura/giden_pdf.php?fno="], a[href*="/e-document/PreviewInvoiceWithFileType.php?ettn="]');
         pdfLinks = Array.from(links)
             .map(link => {
                 const row = link.closest('tr');
