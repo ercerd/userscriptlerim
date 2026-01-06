@@ -12,15 +12,28 @@
 (function() {
   'use strict';
 
-  // Dropdown için seçenekler
-  const dropdownOptions = [
-    { value: '2524308110090207', label: '2025-207' },
-    { value: '2524308110090206', label: '2025-206' },
-    { value: '2424308110090205', label: '2024-205' },
-    { value: '2324308110090204', label: '2023-204' },
+  // Konfigürasyon
+  const config = {
+      maxYears: 4 // Gösterilecek maksimum yıl sayısı
+  };
 
-
+  // Tüm yıl seçenekleri havuzu (Yeni yıllar en üste eklenmeli)
+  const rawOptions = [
+    { year: 2026, value: '2624308110090208', label: '2026-208' },
+    { year: 2026, value: '2624308110090207', label: '2026-207' },
+    { year: 2025, value: '2524308110090207', label: '2025-207' },
+    { year: 2025, value: '2524308110090206', label: '2025-206' },
+    { year: 2024, value: '2424308110090205', label: '2024-205' },
+    { year: 2023, value: '2324308110090204', label: '2023-204' },
+    { year: 2022, value: '2224308110090203', label: '2022-203' }, // Tahmini geçmiş veri
   ];
+
+  // Aktif yılları belirle (En yeni maxYears kadar yıl)
+  const uniqueYears = [...new Set(rawOptions.map(o => o.year))];
+  const activeYears = uniqueYears.slice(0, config.maxYears);
+
+  // Dropdown için seçenekleri filtrele
+  const dropdownOptions = rawOptions.filter(option => activeYears.includes(option.year));
 
   function injectDropdown() {
   // Hedef input alanını bul
