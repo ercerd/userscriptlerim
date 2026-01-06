@@ -19,8 +19,8 @@
 
   // Tüm yıl seçenekleri havuzu (Yeni yıllar en üste eklenmeli)
   const rawOptions = [
-    { year: 2026, value: '2624308110090208', label: '2026-208' },
     { year: 2026, value: '2624308110090207', label: '2026-207' },
+    { year: 2026, value: '2624308110090208', label: '2026-208' },
     { year: 2025, value: '2524308110090207', label: '2025-207' },
     { year: 2025, value: '2524308110090206', label: '2025-206' },
     { year: 2024, value: '2424308110090205', label: '2024-205' },
