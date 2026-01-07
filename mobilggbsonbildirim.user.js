@@ -17,29 +17,44 @@
         const style = document.createElement('style');
         style.innerHTML = `
             @media only screen and (max-width: 1100px) {
-                th:nth-child(7), th:nth-child(8) {
-                    display: table-cell !important;
-                    width: auto !important;
-                    min-width: 100px !important;
-                }
+                th:nth-child(7), th:nth-child(8),
                 td:nth-child(7), td:nth-child(8) {
                     display: table-cell !important;
                     width: auto !important;
-                    min-width: 100px !important;
                 }
             }
             th[style*="display: none"], td[style*="display: none"] {
                 display: table-cell !important;
                 width: auto !important;
-                min-width: 100px !important;
+            }
+            /* Tabloyu saran elemana yatay kaydırma ekle */
+            .table-responsive, .dataTables_wrapper {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            /* Eğer tablo bir div içinde değilse veya wrapper yoksa tabloya stil ver */
+            table {
+                max-width: 100%;
             }
         `;
         document.head.appendChild(style);
 
-        // Doğrudan stil özniteliklerini kaldır
+        // Doğrudan stil özniteliklerini kaldır ancak genişlik zorlama
         document.querySelectorAll('th[style*="display: none"], td[style*="display: none"]').forEach(element => {
             element.style.display = 'table-cell';
-            element.style.width = '100px';
-            element.style.minWidth = '100px';
+            // Genişlik ayarlarını siliyoruz ki tablo patlamasın
+            element.style.width = '';
+            element.style.minWidth = '';
+        });
+
+        // Tablonun ebeveyn elementine scroll özelliği kazandır
+        const tables = document.querySelectorAll('table');
+        tables.forEach(table => {
+            const parent = table.parentElement;
+            if (parent) {
+                parent.style.overflowX = 'auto';
+                parent.style.width = '100%';
+                parent.style.display = 'block'; // Block yaparak genişliği konteyner ile sınırlar
+            }
         });
     })();
