@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Unified (Fatura İşlemleri + Menü)
 // @namespace    http://tampermonkey.net/ 
-// @version      1.1
+// @version      1.2
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @match        https://konat.net.tr/dss33/v33/*
 // @grant        GM_addStyle
@@ -317,11 +317,37 @@
             const t2 = endDateInput.value || '';
             const companyFilter = companyInput.value.trim().toLocaleLowerCase('tr-TR');
 
-            const links = document.querySelectorAll('a[href*="../e-fatura/giden_pdf.php?fno="], a[href*="/e-document/PreviewInvoiceWithFileType.php?ettn="]');
-            pdfLinks = Array.from(links)
+            // 1. ÜNVAN Sütununun İndeksini Bul
+            let unvanIndex = -1;
+            const allLinks = document.querySelectorAll('a[href*="../e-fatura/giden_pdf.php?fno="], a[href*="/e-document/PreviewInvoiceWithFileType.php?ettn="]');
+            
+            if (allLinks.length > 0) {
+                const table = allLinks[0].closest('table');
+                if (table) {
+                    let headers = table.querySelectorAll('thead th');
+                    if (headers.length === 0) {
+                        const firstRow = table.querySelector('tr');
+                        if (firstRow) headers = firstRow.querySelectorAll('th, td');
+                    }
+
+                    if (headers && headers.length > 0) {
+                        headers.forEach((h, i) => {
+                            if (h.textContent.toLocaleUpperCase('tr-TR').includes('ÜNVAN')) {
+                                unvanIndex = i;
+                            }
+                        });
+                    }
+                }
+            }
+
+            const processedRows = new Set();
+
+            pdfLinks = Array.from(allLinks)
                 .map(link => {
                     const row = link.closest('tr');
-                    const cell = row.querySelector('td'); // Genelde ilk hücrede tarih olur
+                    if (!row) return null;
+
+                    const cell = row.querySelector('td');
                     if (!cell) return null;
 
                     const match = cell.textContent.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -330,23 +356,56 @@
                         const [_, gun, ay, yil] = match;
                         tarihISO = `${yil}-${ay}-${gun}`;
                     }
-
-                    // Tarih bulunamadıysa veya filtre boşsa dahil etme mantığı?
-                    // Eğer tarih hücresi bulunamadıysa filtreleme yapamayız, o yüzden tarihi olanları alıyoruz.
                     if (!tarihISO) return null;
 
-                    const rowText = row.textContent.toLocaleLowerCase('tr-TR');
+                    let companyText = '';
+                    if (unvanIndex !== -1) {
+                        const cells = row.querySelectorAll('td');
+                        if (cells[unvanIndex]) {
+                            companyText = cells[unvanIndex].textContent;
+                        }
+                    } else {
+                        companyText = row.textContent;
+                    }
+                    companyText = companyText.toLocaleLowerCase('tr-TR');
 
-                    return { href: link.href, row, tarihISO, rowText };
+                    const isDateMatch = dateInRange(tarihISO, t1, t2);
+                    const isCompanyMatch = !companyFilter || companyText.includes(companyFilter);
+                    const isMatch = isDateMatch && isCompanyMatch;
+
+                    if (!processedRows.has(row)) {
+                        processedRows.add(row);
+                        
+                        if (isMatch) {
+                            row.style.display = ''; 
+                            if (companyFilter) {
+                                row.style.backgroundColor = '#d1e7dd'; 
+                                row.style.transition = 'background-color 0.3s';
+                            } else {
+                                row.style.backgroundColor = '';
+                            }
+                        } else {
+                            if (companyFilter || t1 || t2) {
+                                row.style.display = 'none'; 
+                            } else {
+                                row.style.display = '';
+                                row.style.backgroundColor = '';
+                            }
+                        }
+                    }
+
+                    return isMatch ? { href: link.href, row, tarihISO } : null;
                 })
-                .filter(item => {
-                    if (!item) return false;
-                    const dateMatch = dateInRange(item.tarihISO, t1, t2);
-                    const companyMatch = !companyFilter || item.rowText.includes(companyFilter);
-                    return dateMatch && companyMatch;
-                });
+                .filter(item => item !== null);
 
-            downloadStatus.textContent = `İndirilebilir PDF sayısı: ${pdfLinks.length}`;
+            if (companyFilter) {
+                downloadStatus.innerHTML = `Filtre: <b>"${companyInput.value}"</b><br>Sonuç: ${pdfLinks.length} adet bulundu`;
+                downloadStatus.style.color = '#0f5132';
+            } else {
+                downloadStatus.textContent = `İndirilebilir PDF sayısı: ${pdfLinks.length}`;
+                downloadStatus.style.color = '';
+            }
+
             return pdfLinks;
         }
 
