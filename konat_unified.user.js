@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Unified (Fatura İşlemleri + Menü)
 // @namespace    http://tampermonkey.net/ 
-// @version      1.0
+// @version      1.1
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @match        https://konat.net.tr/dss33/v33/*
 // @grant        GM_addStyle
@@ -168,6 +168,16 @@
         endDateInput.id = 'endDateInput';
         endDateInput.title = 'Bitiş Tarihi';
 
+        const companyInput = document.createElement('input');
+        companyInput.type = 'text';
+        companyInput.id = 'companyInput';
+        companyInput.placeholder = 'Firma Adı...';
+        companyInput.title = 'Firma Adı ile Filtrele';
+        companyInput.style.padding = '4px';
+        companyInput.style.borderRadius = '4px';
+        companyInput.style.border = '1px solid #ccc';
+        companyInput.style.height = '30px'; // Diğer butonlarla uyumlu yükseklik
+
         const downloadButton = document.createElement('button');
         downloadButton.id = 'downloadButton';
         downloadButton.className = 'action-button';
@@ -213,6 +223,7 @@
         customTopBar.append(
             startDateInput, 
             endDateInput, 
+            companyInput,
             downloadButton, 
             pauseButton, 
             autoApproveButton, 
@@ -266,13 +277,16 @@
         const saveDateFilters = () => {
             localStorage.setItem('dateFilterStart', startDateInput.value);
             localStorage.setItem('dateFilterEnd', endDateInput.value);
+            localStorage.setItem('companyFilter', companyInput.value);
         };
 
         const loadDateFilters = () => {
             const savedStart = localStorage.getItem('dateFilterStart');
             const savedEnd = localStorage.getItem('dateFilterEnd');
+            const savedCompany = localStorage.getItem('companyFilter');
             if (savedStart) startDateInput.value = savedStart;
             if (savedEnd) endDateInput.value = savedEnd;
+            if (savedCompany) companyInput.value = savedCompany;
         };
 
         // === Log Fonksiyonları ===
@@ -301,6 +315,7 @@
         function findPDFLinks() {
             const t1 = startDateInput.value || '';
             const t2 = endDateInput.value || '';
+            const companyFilter = companyInput.value.trim().toLocaleLowerCase('tr-TR');
 
             const links = document.querySelectorAll('a[href*="../e-fatura/giden_pdf.php?fno="], a[href*="/e-document/PreviewInvoiceWithFileType.php?ettn="]');
             pdfLinks = Array.from(links)
@@ -320,9 +335,16 @@
                     // Eğer tarih hücresi bulunamadıysa filtreleme yapamayız, o yüzden tarihi olanları alıyoruz.
                     if (!tarihISO) return null;
 
-                    return { href: link.href, row, tarihISO };
+                    const rowText = row.textContent.toLocaleLowerCase('tr-TR');
+
+                    return { href: link.href, row, tarihISO, rowText };
                 })
-                .filter(item => item && dateInRange(item.tarihISO, t1, t2));
+                .filter(item => {
+                    if (!item) return false;
+                    const dateMatch = dateInRange(item.tarihISO, t1, t2);
+                    const companyMatch = !companyFilter || item.rowText.includes(companyFilter);
+                    return dateMatch && companyMatch;
+                });
 
             downloadStatus.textContent = `İndirilebilir PDF sayısı: ${pdfLinks.length}`;
             return pdfLinks;
@@ -647,6 +669,12 @@
         });
 
         endDateInput.addEventListener('change', () => {
+            saveDateFilters();
+            findPDFLinks();
+            buildApproveQueue();
+        });
+
+        companyInput.addEventListener('input', () => {
             saveDateFilters();
             findPDFLinks();
             buildApproveQueue();
