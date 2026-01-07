@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Unified (Fatura İşlemleri + Menü)
 // @namespace    http://tampermonkey.net/ 
-// @version      1.2
+// @version      1.3
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @match        https://konat.net.tr/dss33/v33/*
 // @grant        GM_addStyle
@@ -316,6 +316,7 @@
             const t1 = startDateInput.value || '';
             const t2 = endDateInput.value || '';
             const companyFilter = companyInput.value.trim().toLocaleLowerCase('tr-TR');
+            const isFilterActive = t1 || t2 || companyFilter;
 
             // 1. ÜNVAN Sütununun İndeksini Bul
             let unvanIndex = -1;
@@ -376,21 +377,16 @@
                     if (!processedRows.has(row)) {
                         processedRows.add(row);
                         
-                        if (isMatch) {
-                            row.style.display = ''; 
-                            if (companyFilter) {
-                                row.style.backgroundColor = '#d1e7dd'; 
-                                row.style.transition = 'background-color 0.3s';
-                            } else {
-                                row.style.backgroundColor = '';
-                            }
+                        // Her zaman görünür olsun
+                        row.style.display = '';
+
+                        // Filtre aktifse ve eşleşiyorsa renklendir
+                        if (isFilterActive && isMatch) {
+                            row.style.backgroundColor = '#d1e7dd'; 
+                            row.style.transition = 'background-color 0.3s';
                         } else {
-                            if (companyFilter || t1 || t2) {
-                                row.style.display = 'none'; 
-                            } else {
-                                row.style.display = '';
-                                row.style.backgroundColor = '';
-                            }
+                            // Filtre yoksa veya eşleşmiyorsa rengi sıfırla
+                            row.style.backgroundColor = '';
                         }
                     }
 
@@ -398,8 +394,9 @@
                 })
                 .filter(item => item !== null);
 
-            if (companyFilter) {
-                downloadStatus.innerHTML = `Filtre: <b>"${companyInput.value}"</b><br>Sonuç: ${pdfLinks.length} adet bulundu`;
+            if (isFilterActive) {
+                const filterText = companyFilter ? `Filtre: <b>"${companyInput.value}"</b>` : "Tarih filtresi aktif";
+                downloadStatus.innerHTML = `${filterText}<br>Seçilen: ${pdfLinks.length} adet fatura`;
                 downloadStatus.style.color = '#0f5132';
             } else {
                 downloadStatus.textContent = `İndirilebilir PDF sayısı: ${pdfLinks.length}`;
