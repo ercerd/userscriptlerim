@@ -493,7 +493,7 @@
             mergeLog.innerHTML = '';
             mergeProgressBar.style.width = '0%';
             mergeProgressBar.textContent = '0%';
-            mergeStatus.textContent = 'PDF\\'ler indiriliyor...';
+            mergeStatus.textContent = "PDF'ler indiriliyor...";
             downloadMergedButton.style.display = 'none';
             mergedPdfBlob = null;
 
