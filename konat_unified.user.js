@@ -181,7 +181,7 @@
         const downloadButton = document.createElement('button');
         downloadButton.id = 'downloadButton';
         downloadButton.className = 'action-button';
-        downloadButton.textContent = 'PDF İndir';
+        downloadButton.textContent = "Tüm PDF'leri ayrı ayrı İndir";
 
         const pauseButton = document.createElement('button');
         pauseButton.id = 'pauseButton';
