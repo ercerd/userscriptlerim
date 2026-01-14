@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Unified (Fatura İşlemleri + Menü)
 // @namespace    http://tampermonkey.net/ 
-// @version      1.5
+// @version      1.6
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @match        https://konat.net.tr/dss33/v33/*
 // @grant        GM_addStyle
@@ -39,11 +39,17 @@
                 background-color: #f8f9fa;
                 border-bottom: 1px solid #ddd;
                 display: flex;
-                align-items: center;
-                padding: 5px;
+                flex-direction: column; /* İki satır için */
+                align-items: flex-start;
+                padding: 8px;
                 gap: 8px;
                 z-index: 999;
+            }
+            .filter-row {
+                display: flex;
                 flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
             }
             .action-button {
                 padding: 6px 12px;
@@ -55,6 +61,7 @@
                 height: 30px;
                 white-space: nowrap;
             }
+            #clearFiltersButton { background-color: #6c757d; }
             #downloadButton { background-color: #4CAF50; }
             #pauseButton { background-color: #f44336; }
             #autoApproveButton { background-color: #2196F3; }
@@ -69,7 +76,7 @@
                 border: 1px solid #ddd;
             }
             /* body padding arttırılıyor ki üst bar içeriği kapatmasın */
-            body { padding-top: 90px !important; }
+            body { padding-top: 130px !important; } /* Artan bar yüksekliği için padding ayarı */
 
             /* Modal */
             .merge-modal {
@@ -158,6 +165,12 @@
         );
 
         // === UI Elemanları ===
+        const clearFiltersButton = document.createElement('button');
+        clearFiltersButton.id = 'clearFiltersButton';
+        clearFiltersButton.className = 'action-button';
+        clearFiltersButton.textContent = 'Temizle';
+        clearFiltersButton.title = 'Tüm Filtreleri Temizle';
+
         const startDateInput = document.createElement('input');
         startDateInput.type = 'date';
         startDateInput.id = 'startDateInput';
@@ -258,23 +271,19 @@
         approveStatus.id = 'approveStatus';
         approveStatus.className = 'status-text';
 
+        // Bar'ı iki satır olarak düzenle
+        const topRow = document.createElement('div');
+        topRow.className = 'filter-row';
+        topRow.append(clearFiltersButton, startDateInput, endDateInput, companyInput, hideNoPdfContainer, hideWithPdfContainer);
+
+        const bottomRow = document.createElement('div');
+        bottomRow.className = 'filter-row';
+        bottomRow.append(downloadButton, pauseButton, autoApproveButton, stopApproveButton, copyLinksButton, mergeButton, downloadStatus, approveStatus);
+        
         const customTopBar = document.createElement('div');
         customTopBar.className = 'custom-top-bar';
-        customTopBar.append(
-            startDateInput, 
-            endDateInput, 
-            companyInput,
-            hideNoPdfContainer,
-            hideWithPdfContainer,
-            downloadButton, 
-            pauseButton, 
-            autoApproveButton, 
-            stopApproveButton, 
-            copyLinksButton, 
-            mergeButton, 
-            downloadStatus, 
-            approveStatus
-        );
+        customTopBar.append(topRow, bottomRow);
+        
         document.body.insertBefore(customTopBar, document.body.firstChild);
 
         // Modal oluştur
@@ -788,6 +797,18 @@
                 URL.revokeObjectURL(url);
                 addLog('✓ İndirme başlatıldı', 'success');
             }
+        });
+
+        clearFiltersButton.addEventListener('click', () => {
+            startDateInput.value = '';
+            endDateInput.value = '';
+            companyInput.value = '';
+            hideNoPdfCheckbox.checked = false;
+            hideWithPdfCheckbox.checked = false;
+            
+            saveDateFilters();
+            findPDFLinks();
+            buildApproveQueue();
         });
 
         startDateInput.addEventListener('change', () => {
