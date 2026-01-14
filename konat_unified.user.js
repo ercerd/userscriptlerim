@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Unified (Fatura İşlemleri + Menü)
 // @namespace    http://tampermonkey.net/ 
-// @version      1.4
+// @version      1.5
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @match        https://konat.net.tr/dss33/v33/*
 // @grant        GM_addStyle
@@ -198,6 +198,26 @@
 
         hideNoPdfContainer.append(hideNoPdfCheckbox, hideNoPdfLabel);
 
+        const hideWithPdfContainer = document.createElement('div');
+        hideWithPdfContainer.style.display = 'flex';
+        hideWithPdfContainer.style.alignItems = 'center';
+        hideWithPdfContainer.style.gap = '5px';
+        hideWithPdfContainer.title = 'PDF linki bulunan satırları gizle';
+
+        const hideWithPdfCheckbox = document.createElement('input');
+        hideWithPdfCheckbox.type = 'checkbox';
+        hideWithPdfCheckbox.id = 'hideWithPdfCheckbox';
+        hideWithPdfCheckbox.style.cursor = 'pointer';
+
+        const hideWithPdfLabel = document.createElement('label');
+        hideWithPdfLabel.htmlFor = 'hideWithPdfCheckbox';
+        hideWithPdfLabel.textContent = 'PDF Olanları Gizle';
+        hideWithPdfLabel.style.fontSize = '13px';
+        hideWithPdfLabel.style.cursor = 'pointer';
+        hideWithPdfLabel.style.userSelect = 'none';
+
+        hideWithPdfContainer.append(hideWithPdfCheckbox, hideWithPdfLabel);
+
         const downloadButton = document.createElement('button');
         downloadButton.id = 'downloadButton';
         downloadButton.className = 'action-button';
@@ -245,6 +265,7 @@
             endDateInput, 
             companyInput,
             hideNoPdfContainer,
+            hideWithPdfContainer,
             downloadButton, 
             pauseButton, 
             autoApproveButton, 
@@ -300,6 +321,7 @@
             localStorage.setItem('dateFilterEnd', endDateInput.value);
             localStorage.setItem('companyFilter', companyInput.value);
             localStorage.setItem('hideNoPdf', hideNoPdfCheckbox.checked);
+            localStorage.setItem('hideWithPdf', hideWithPdfCheckbox.checked);
         };
 
         const loadDateFilters = () => {
@@ -307,10 +329,12 @@
             const savedEnd = localStorage.getItem('dateFilterEnd');
             const savedCompany = localStorage.getItem('companyFilter');
             const savedHideNoPdf = localStorage.getItem('hideNoPdf');
+            const savedHideWithPdf = localStorage.getItem('hideWithPdf');
             if (savedStart) startDateInput.value = savedStart;
             if (savedEnd) endDateInput.value = savedEnd;
             if (savedCompany) companyInput.value = savedCompany;
             if (savedHideNoPdf === 'true') hideNoPdfCheckbox.checked = true;
+            if (savedHideWithPdf === 'true') hideWithPdfCheckbox.checked = true;
         };
 
         // === Log Fonksiyonları ===
@@ -341,6 +365,7 @@
             const t2 = endDateInput.value || '';
             const companyFilter = companyInput.value.trim().toLocaleLowerCase('tr-TR');
             const hideNoPdf = hideNoPdfCheckbox.checked;
+            const hideWithPdf = hideWithPdfCheckbox.checked;
             const isFilterActive = t1 || t2 || companyFilter;
 
             const pdfLinkSelector = 'a[href*="../e-fatura/giden_pdf.php?fno="], a[href*="/e-document/PreviewInvoiceWithFileType.php?ettn="]';
@@ -365,14 +390,22 @@
                         });
                     }
 
-                    // TÜM SATIRLARI KONTROL ET (PDF olmayanları gizlemek için)
-                    const allRows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
-                    allRows.forEach(row => {
+                    // TÜM SATIRLARI KONTROL ET (PDF olan/olmayanları gizlemek için)
+                    const allTableRows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
+                    allTableRows.forEach(row => {
                         const hasPdf = row.querySelector(pdfLinkSelector);
+                        let shouldHide = false;
+
                         if (hideNoPdf && !hasPdf) {
+                            shouldHide = true;
+                        }
+                        if (hideWithPdf && hasPdf) {
+                            shouldHide = true;
+                        }
+                        
+                        if (shouldHide) {
                             row.style.display = 'none';
                         } else {
-                            // Diğer filtreler (tarih/ünvan) satırı gizlemiyor, sadece renklendiriyor demiştik
                             row.style.display = ''; 
                         }
                     });
@@ -385,6 +418,11 @@
                 .map(link => {
                     const row = link.closest('tr');
                     if (!row) return null;
+
+                    // Eğer satır zaten yukarıdaki PDF gizleme filtreleri tarafından gizlenmişse, renklendirme vs. yapmaya gerek yok
+                    if (row.style.display === 'none') {
+                        return null; // Gizli satırlar, diğer filtrelemeye dahil edilmesin
+                    }
 
                     const cell = row.querySelector('td');
                     if (!cell) return null;
@@ -771,6 +809,11 @@
         });
 
         hideNoPdfCheckbox.addEventListener('change', () => {
+            saveDateFilters();
+            findPDFLinks();
+        });
+
+        hideWithPdfCheckbox.addEventListener('change', () => {
             saveDateFilters();
             findPDFLinks();
         });
