@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Fatura İşlemleri
 // @namespace    http://tampermonkey.net/ 
-// @version      4.0
+// @version      4.1
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
 // @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
@@ -382,45 +382,57 @@
             const pdfLinkSelector = 'a[href*="../e-fatura/giden_pdf.php?fno="], a[href*="/e-document/PreviewInvoiceWithFileType.php?ettn="]';
             const allLinks = document.querySelectorAll(pdfLinkSelector);
             
-            // 1. ÜNVAN Sütununun İndeksini Bul
-            let unvanIndex = -1;
+            // Tabloyu Bul
+            let table = null;
             if (allLinks.length > 0) {
-                const table = allLinks[0].closest('table');
-                if (table) {
-                    let headers = table.querySelectorAll('thead th');
-                    if (headers.length === 0) {
-                        const firstRow = table.querySelector('tr');
-                        if (firstRow) headers = firstRow.querySelectorAll('th, td');
+                table = allLinks[0].closest('table');
+            } else {
+                // PDF linki yoksa, ÜNVAN başlığı olan tabloyu bulmaya çalış
+                const headers = document.querySelectorAll('th, td');
+                for (const h of headers) {
+                    if (h.textContent.toLocaleUpperCase('tr-TR').includes('ÜNVAN')) {
+                        table = h.closest('table');
+                        break;
                     }
+                }
+            }
 
-                    if (headers && headers.length > 0) {
-                        headers.forEach((h, i) => {
-                            if (h.textContent.toLocaleUpperCase('tr-TR').includes('ÜNVAN')) {
-                                unvanIndex = i;
-                            }
-                        });
-                    }
+            // 1. ÜNVAN Sütununun İndeksini Bul ve Satırları İşle
+            let unvanIndex = -1;
+            if (table) {
+                let headers = table.querySelectorAll('thead th');
+                if (headers.length === 0) {
+                    const firstRow = table.querySelector('tr');
+                    if (firstRow) headers = firstRow.querySelectorAll('th, td');
+                }
 
-                    // TÜM SATIRLARI KONTROL ET (PDF olan/olmayanları gizlemek için)
-                    const allTableRows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
-                    allTableRows.forEach(row => {
-                        const hasPdf = row.querySelector(pdfLinkSelector);
-                        let shouldHide = false;
-
-                        if (hideNoPdf && !hasPdf) {
-                            shouldHide = true;
-                        }
-                        if (hideWithPdf && hasPdf) {
-                            shouldHide = true;
-                        }
-                        
-                        if (shouldHide) {
-                            row.style.display = 'none';
-                        } else {
-                            row.style.display = ''; 
+                if (headers && headers.length > 0) {
+                    headers.forEach((h, i) => {
+                        if (h.textContent.toLocaleUpperCase('tr-TR').includes('ÜNVAN')) {
+                            unvanIndex = i;
                         }
                     });
                 }
+
+                // TÜM SATIRLARI KONTROL ET (PDF olan/olmayanları gizlemek için)
+                const allTableRows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
+                allTableRows.forEach(row => {
+                    const hasPdf = row.querySelector(pdfLinkSelector);
+                    let shouldHide = false;
+
+                    if (hideNoPdf && !hasPdf) {
+                        shouldHide = true;
+                    }
+                    if (hideWithPdf && hasPdf) {
+                        shouldHide = true;
+                    }
+                    
+                    if (shouldHide) {
+                        row.style.display = 'none';
+                    } else {
+                        row.style.display = ''; 
+                    }
+                });
             }
 
             const processedRows = new Set();
