@@ -17,14 +17,18 @@ Eklentiyi kurduktan sonra, aşağıdaki listeden istediğiniz betiğin adına t�
 | **[karantina.user.js](karantina.user.js)** | Karantina BSS Uygunluk Sorgulama sayfasına sık kullanılan kapıların (Mersin, Edirne vb.) yıl bazlı sayı başlangıçlarını ekleyen hızlı seçim butonları. | 2.50 |
 | **[tps.user.js](tps.user.js)** | Tek Pencere Sistemi (TPS) belge listesi sayfasında, arama kutusunun yanına yıl ve belge serisi seçimi için pratik bir dropdown menü ekler. | 1.2 |
 | **[combinedonbildirim.user.js](combinedonbildirim.user.js)** | Captcha otomatik doldurma, form alanı güncellemeleri ve sertifika işlemleri gibi özellikleri tek bir çatı altında toplayan hepsi bir arada araç. | - |
-| **[konatfaturaislemleri.user.js](konatfaturaislemleri.user.js)** | PDF indirme, onaylama, linkleri kopyalama ve tarayıcıda birleştirme gibi fatura işlemlerini kolaylaştırır. | - |
-| **[konatmenu.user.js](konatmenu.user.js)** | "İşlemdeki Belgeler" menüsünü geliştirerek açılır/kapanır hale getirir, özel linkler ve kısayollar ekler. | - |
+| **[konatfaturaislemleri.user.js](konatfaturaislemleri.user.js)** | Konat için fatura ve menü işlemlerini birleştiren hepsi bir arada çözüm. Özellikler: PDF indirme/birleştirme, tarih/firma filtresi, satır gizleme/renklendirme, otomatik onay, menü kısayolları. | 1.6 |
 | **[gorev.user.js](gorev.user.js)** | Multiselect (çoklu seçim) destekli gelişmiş form doldurma işlemleri yapar. | - |
 | **[ggbsithalat.user.js](ggbsithalat.user.js)** | GGBS İthalat sayfalarında dropdownlardan hızlı değer seçimi yapmak için kenar çubuğu ve butonlar ekler. | - |
 | **[mobilggbsonbildirim.user.js](mobilggbsonbildirim.user.js)** | Mobil görünümde gizlenen Gümrük Başvuru No ve Tarihi sütunlarını görünür hale getirir. | - |
 
 ## 🔄 Güncellemeler
 
+* **15.01.2026:** `konatfaturaislemleri.user.js` ve `konatmenu.user.js` betikleri `konatfaturaislemleri.user.js` adı altında birleştirildi. Yeni özellikler eklendi:
+    - Kompakt, iki satırlı filtre ve eylem barı.
+    - Tüm filtreleri temizleme butonu.
+    - PDF'i olan/olmayan faturaları gizleme seçeneği.
+    - Otomatik güncelleme için `@updateURL` ve `@downloadURL` eklendi.
 * **06.01.2026:** `karantina.user.js` ve `tps.user.js` betikleri 2026 yılına uyumlu hale getirildi. Modüler yapıya geçilerek yıl yönetimi kolaylaştırıldı.
 
 ## 🤝 Katkıda Bulunma

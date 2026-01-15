@@ -1,8 +1,10 @@
 // ==UserScript==
-// @name         Konat Unified (Fatura İşlemleri + Menü)
+// @name         Konat Fatura İşlemleri
 // @namespace    http://tampermonkey.net/ 
 // @version      1.6
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
 // @match        https://konat.net.tr/dss33/v33/*
 // @grant        GM_addStyle
 // @grant        GM_setClipboard
