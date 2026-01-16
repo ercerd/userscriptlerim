@@ -31,6 +31,7 @@
         { prefix: '76-ITH2', name: 'Dilucu-Iğdır    :' },
         { prefix: '31-ITH1', name: 'Hatay           :' },
         { prefix: '73-ITH1', name: 'Habur            :' },
+        { prefix: '65-ITH2', name: 'Kapıköy          :' },
         { prefix: '33-IADE1', name: 'İhraç İadesi    :' },
     ];
 
