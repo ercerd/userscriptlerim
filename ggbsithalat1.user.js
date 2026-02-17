@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGBS AnaMenu Sidebar (Modern Paste Test)
 // @namespace    http://tampermonkey.net/
-// @version      1.24
+// @version      1.28
 // @description  Adds a sidebar with buttons to select specific values from dropdowns in any iframe and click a specific button (Test file for modern paste)
 // @author       Your Name
 // @match        http://172.20.20.103/cis/servlet/StartCISPage?PAGEURL=/FSIS/ggbs.giris.html&POPUPTITLE=AnaMenu
@@ -43,6 +43,71 @@
                 setTimeout(() => resolve(true), delayMs);
             } catch (error) {
                 GM_log(`Error selecting dropdown ${dropdownId}: ${error}`);
+                reject(error);
+            }
+        });
+    };
+
+    // Türkçe karakter normalizasyonu fonksiyonu
+    const normalizeTurkish = (text) => {
+        if (!text) return '';
+        const turkishMap = {
+            'İ': 'I', 'i': 'i',
+            'Ş': 'S', 'ş': 's',
+            'Ğ': 'G', 'ğ': 'g',
+            'Ü': 'U', 'ü': 'u',
+            'Ö': 'O', 'ö': 'o',
+            'Ç': 'C', 'ç': 'c',
+            'I': 'I', 'ı': 'i'
+        };
+
+        let normalized = text.toUpperCase();
+        for (let [turkish, latin] of Object.entries(turkishMap)) {
+            normalized = normalized.replace(new RegExp(turkish, 'g'), latin);
+        }
+        return normalized;
+    };
+
+    // YENİ FONKSİYON: Laboratuvar dropdown'ında metin bazlı arama yaparak seçim
+    const selectLabByText = (iframeDocument, dropdownId, searchText) => {
+        return new Promise((resolve, reject) => {
+            try {
+                const dropdown = iframeDocument.getElementById(dropdownId);
+                if (!dropdown) {
+                    GM_log(`Dropdown with id ${dropdownId} not found.`);
+                    return reject(`Dropdown with id ${dropdownId} not found.`);
+                }
+
+                const normalizedSearch = normalizeTurkish(searchText.trim());
+                let foundIndex = -1;
+
+                // Tüm seçenekleri dolaş ve eşleşen ilk seçeneği bul
+                for (let i = 0; i < dropdown.options.length; i++) {
+                    const optionText = normalizeTurkish(dropdown.options[i].text.trim());
+                    if (optionText.startsWith(normalizedSearch)) {
+                        foundIndex = i;
+                        GM_log(`Eşleşme bulundu: '${searchText}' -> '${dropdown.options[i].text}' (index: ${i})`);
+                        break;
+                    }
+                }
+
+                if (foundIndex === -1) {
+                    GM_log(`Lab code '${searchText}' not found in dropdown ${dropdownId}`);
+                    // Debug için tüm seçenekleri logla
+                    GM_log('Mevcut seçenekler:');
+                    for (let i = 0; i < dropdown.options.length; i++) {
+                        GM_log(`  [${i}] ${dropdown.options[i].text}`);
+                    }
+                    return reject(`Lab code '${searchText}' not found`);
+                }
+
+                dropdown.selectedIndex = foundIndex;
+                triggerEvent(dropdown, 'change');
+                triggerEvent(dropdown, 'input');
+                GM_log(`Lab '${searchText}' selected at index ${foundIndex} in dropdown ${dropdownId}`);
+                resolve(true);
+            } catch (error) {
+                GM_log(`Error selecting lab in dropdown ${dropdownId}: ${error}`);
                 reject(error);
             }
         });
@@ -796,14 +861,21 @@
         return selectDropdown(iframeDocument, 'CDYN_117', 1);
     };
 
-    const triggerAdditionalButton = (iframeDocument, buttonLabel) => {
-        const buttonLabels = ['ANK', 'BAL', 'INT', 'İST', 'İZM', 'İL', 'STA', 'MGA', 'MRL', 'MSM', 'PMG', 'SİA', 'SİM', 'SOU'];
-        const index = buttonLabels.indexOf(buttonLabel);
-        if (index !== -1) {
-            selectDropdown(iframeDocument, 'CDYN_150', index + 1);
-        } else {
-            GM_log(`Button label ${buttonLabel} not found in the list`);
+    // DEĞİŞTİRİLDİ: Artık index yerine metin bazlı arama yapıyor
+    const triggerAdditionalButton = (iframeDocument, searchText) => {
+        if (!searchText || !iframeDocument) {
+            GM_log('Invalid searchText or iframeDocument for triggerAdditionalButton');
+            return;
         }
+
+        selectLabByText(iframeDocument, 'CDYN_150', searchText)
+            .then(() => {
+                GM_log(`Laboratuvar '${searchText}' başarıyla seçildi`);
+            })
+            .catch(error => {
+                GM_log(`Laboratuvar seçiminde hata: ${error}`);
+                alert(`Laboratuvar metni '${searchText}' bulunamadı. Lütfen geçerli bir metin girin.`);
+            });
     };
 
     const numuneKgAction = () => {
@@ -840,7 +912,7 @@
                     });
             })
             .then(() => {
-                const additionalButtonLabel = prompt("Lütfen 3 haneli kodu girin:");
+                const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
                 if (additionalButtonLabel) {
                     triggerAdditionalButton(iframeDocument, additionalButtonLabel);
                 }
@@ -882,7 +954,7 @@
                     });
             })
             .then(() => {
-                const additionalButtonLabel = prompt("Lütfen 3 haneli kodu girin:");
+                const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
                 if (additionalButtonLabel) {
                     triggerAdditionalButton(iframeDocument, additionalButtonLabel);
                 }
@@ -924,7 +996,7 @@
                     });
             })
             .then(() => {
-                const additionalButtonLabel = prompt("Lütfen 3 haneli kodu girin:");
+                const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
                 if (additionalButtonLabel) {
                     triggerAdditionalButton(iframeDocument, additionalButtonLabel);
                 }
@@ -932,40 +1004,67 @@
             .catch(error => GM_log('Error in numuneLitreAction: ' + error));
     };
 
+    // ÖNEMLİ DEĞİŞİKLİK: numuneLabGonderAction fonksiyonu yeniden yazıldı
     const numuneLabGonderAction = () => {
         const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
-        if (iframeDocument) {
-            // RADIO245 tıkla
-            const radio245 = iframeDocument.getElementById('RADIO245');
-            if (radio245) {
-                radio245.click();
-                GM_log('RADIO245 ID\'li düğme tıklandı');
-            } else {
-                GM_log('RADIO245 bulunamadı');
-            }
+        if (!iframeDocument) {
+            GM_log('Target iframe for Numune Bilgileri not found or not visible');
+            alert('Numune sayfası bulunamadı!');
+            return;
+        }
 
-            // F_261 doldur
+        // RADIO245 tıkla
+        const radio245 = iframeDocument.getElementById('RADIO245');
+        if (radio245) {
+            radio245.click();
+            GM_log('RADIO245 ID\'li düğme tıklandı');
+        } else {
+            GM_log('RADIO245 bulunamadı');
+        }
+
+        // F_261 için yeni yaklaşım: Daha fazla event tetikleme ve bekleme
+        setTimeout(() => {
             const field261 = iframeDocument.getElementById('F_261');
             if (field261) {
-                field261.value = currentDate;
+                // Alanı temizle ve focus ver
+                field261.value = '';
                 field261.focus();
+
+                // Değeri yaz
+                field261.value = currentDate;
+
+                // Tüm olası eventleri tetikle
                 triggerEvent(field261, 'keydown');
                 triggerEvent(field261, 'keypress');
                 triggerEvent(field261, 'input');
                 triggerEvent(field261, 'keyup');
                 triggerEvent(field261, 'change');
-                field261.click();
+
+                GM_log('F_261 alanına tarih yazıldı: ' + currentDate);
+
+                // Blur işlemi için gecikme
                 setTimeout(() => {
-                    field261.blur();
-                    iframeDocument.body.click(); // Ekstra güvenlik için body tıklaması
-                    GM_log('F_261 için body\'ye manuel tıklama simüle edildi');
-                }, 200); // Blur ve tıklama için gecikme
-                GM_log('F_261 alanına tarih dolduruldu: ' + currentDate);
+                    triggerEvent(field261, 'blur');
+                    // Başka bir alana focus ver (sistem tarihi algılaması için)
+                    const field264 = iframeDocument.getElementById('F_264');
+                    if (field264) {
+                        field264.focus();
+                    }
+                    GM_log('F_261 blur olayı tetiklendi');
+
+                    // Ekstra güvenlik: Body'ye tıklama
+                    setTimeout(() => {
+                        iframeDocument.body.click();
+                        GM_log('F_261 için body\'ye tıklama simüle edildi');
+                    }, 300);
+                }, 500);
             } else {
                 GM_log('F_261 alanı bulunamadı');
             }
+        }, 500);
 
-            // F_264 doldur
+        // F_264 doldur (evrak sayısı)
+        setTimeout(() => {
             const evrakSayisi = prompt("Evrak sayısını giriniz:");
             if (evrakSayisi !== null && evrakSayisi.trim() !== "") {
                 const field264 = iframeDocument.getElementById('F_264');
@@ -977,46 +1076,52 @@
                     triggerEvent(field264, 'input');
                     triggerEvent(field264, 'keyup');
                     triggerEvent(field264, 'change');
-                    field264.click();
-                    setTimeout(() => field264.blur(), 100);
-                    GM_log('F_264 alanına evrak sayısı yazıldı: ' + evrakSayisi);
+
+                    setTimeout(() => {
+                        triggerEvent(field264, 'blur');
+                        GM_log('F_264 alanına evrak sayısı yazıldı: ' + evrakSayisi);
+                    }, 200);
                 } else {
                     GM_log('F_264 alanı bulunamadı');
                 }
             } else {
                 GM_log('Evrak sayısı girilmedi');
             }
+        }, 1500);
 
-            // B_273 tıkla
+        // B_273 tıkla
+        setTimeout(() => {
             const dropdown150 = iframeDocument.getElementById('CDYN_150');
             let labValue = 'Bilinmeyen Laboratuvar';
             if (dropdown150 && dropdown150.selectedIndex >= 0) {
                 labValue = dropdown150.options[dropdown150.selectedIndex].text;
             }
+
             const confirmation = confirm(`Numunenin ${labValue}'ye gönderilecek, laboratuvarı kontrol ettiğinizden emin misiniz?`);
             if (confirmation) {
                 const button273 = iframeDocument.getElementById('B_273');
                 if (button273) {
+                    // Daha fazla bekleme süresi
                     setTimeout(() => {
                         triggerEvent(button273, 'mousedown');
                         triggerEvent(button273, 'mouseup');
                         button273.click();
                         GM_log('B_273 butonu tıklandı');
+
+                        // Üst elemente de tıklama
                         const parentElement = button273.parentElement;
                         if (parentElement) {
                             parentElement.click();
                             GM_log('B_273 üst elementine manuel tıklama simüle edildi');
                         }
-                    }, 500);
+                    }, 800);
                 } else {
                     GM_log('B_273 butonu bulunamadı');
                 }
             } else {
                 GM_log('Kullanıcı B_273 tıklamasını iptal etti');
             }
-        } else {
-            GM_log('Target iframe for Numune Bilgileri not found or not visible');
-        }
+        }, 2500);
     };
 
     const ekleButtonAction = () => {
@@ -1110,19 +1215,46 @@
         }
     };
 
+    // DEĞİŞTİRİLDİ: Kare butonlar artık metin bazlı seçim yapıyor
+    // Her buton için { label: "Buton Adı", searchText: "Aranacak Metin" } formatı
     const createSquareButtons = (parentElement) => {
-        const buttonLabels = ['ANK', 'BAL', 'INT', 'İST', 'İZM', 'İL', 'STA', 'MGA', 'MRL', 'MSM', 'PMG', 'SİA', 'SİM', 'SOU'];
+        const buttonConfigs = [
+            { label: 'ANK', searchText: 'ANKARA' },
+            { label: 'BAL', searchText: 'BAL' },
+            { label: 'INT', searchText: 'İNTER' },
+            { label: 'İST', searchText: 'İSTANBUL GIDA' },
+            { label: 'İZM', searchText: 'İZMİR' },
+            { label: 'İL', searchText: 'MERSİN GIDA' },
+            { label: 'STA', searchText: 'Mersin Veltia' },
+            { label: 'MGA', searchText: 'MGA' },
+            { label: 'MRL', searchText: 'MRL' },
+            { label: 'MSM', searchText: 'MSM' },
+            { label: 'PMG', searchText: 'PMG' },
+            { label: 'SİA', searchText: 'SİA' },
+            { label: 'SİM', searchText: 'SİMPLİQA' },
+            { label: 'SOU', searchText: 'SOUTHERN' }
+        ];
+
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'square-button-container';
         buttonContainer.style.display = 'grid';
         buttonContainer.style.gridTemplateColumns = 'repeat(3, 1fr)';
-        buttonLabels.forEach((label, index) => {
+
+        buttonConfigs.forEach((config) => {
             const button = document.createElement('button');
-            button.innerText = label;
+            button.innerText = config.label;
+            button.title = config.searchText; // Tooltip olarak aranacak metni göster
             button.addEventListener('click', () => {
                 const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
                 if (iframeDocument) {
-                    selectDropdown(iframeDocument, 'CDYN_150', index + 1);
+                    selectLabByText(iframeDocument, 'CDYN_150', config.searchText)
+                        .then(() => {
+                            GM_log(`Laboratuvar '${config.searchText}' kare buton '${config.label}' ile seçildi`);
+                        })
+                        .catch(error => {
+                            GM_log(`Laboratuvar seçiminde hata: ${error}`);
+                            alert(`Laboratuvar metni '${config.searchText}' bulunamadı.`);
+                        });
                 } else {
                     GM_log('Target iframe for Numune Bilgileri not found or not visible');
                 }
