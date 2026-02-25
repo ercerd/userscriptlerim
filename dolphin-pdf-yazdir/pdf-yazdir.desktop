@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Service
+MimeType=application/pdf;
+X-KDE-ServiceTypes=KonqPopupMenu/Plugin
+Actions=yazdir;
+
+[Desktop Action yazdir]
+Name=PDF Yazdır (2 sayfa/yaprak)
+Icon=printer
+Exec=ghostty -e fish ~/yazdir.fish %F
+Terminal=true
