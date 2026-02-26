@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.191
+// @version      2.192
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -332,6 +332,21 @@
         }
     }
 
+    // Function to handle Etiket İndir button click
+    function handleEtiketClick() {
+        try {
+            const etiketButtonElement = document.querySelector('img[name="Button_Etiket_gost"]');
+            if (etiketButtonElement) {
+                etiketButtonElement.click();
+                showToast('Etiket indirme işlemi başlatıldı.', 'success');
+            } else {
+                throw new Error('Etiket butonu bulunamadı.');
+            }
+        } catch (error) {
+            showToast('Etiket indirme işlemi başarısız: ' + error.message, 'error');
+        }
+    }
+
     // Function to handle Formu Sıfırla button click
     function handleResetClick() {
         try {
@@ -443,6 +458,18 @@
         icerikButton.style.cursor = 'pointer';
         buttonContainer.appendChild(icerikButton);
         icerikButton.addEventListener('click', handleIcerikClick);
+
+        // Create Etiket İndir button
+        const etiketButton = document.createElement('button');
+        etiketButton.innerText = 'Etiket İndir';
+        etiketButton.style.padding = '10px 20px';
+        etiketButton.style.backgroundColor = '#9c27b0';
+        etiketButton.style.color = 'white';
+        etiketButton.style.border = 'none';
+        etiketButton.style.borderRadius = '5px';
+        etiketButton.style.cursor = 'pointer';
+        buttonContainer.appendChild(etiketButton);
+        etiketButton.addEventListener('click', handleEtiketClick);
 
         // Create Formu Sıfırla button
         const resetButton = document.createElement('button');
