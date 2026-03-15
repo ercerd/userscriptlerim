@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.192
+// @version      2.193
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -21,12 +21,10 @@
     // Function to get the previous workday
     function getPreviousWorkday(date) {
         var day = date.getDay();
-        if (day === 1) { // If it's Monday
-            date.setDate(date.getDate() - 0); // Go back to Friday
-        } else if (day === 0) { // If it's Sunday
+        if (day === 0) { // Sunday
+            date.setDate(date.getDate() - 2); // Go back to Friday
+        } else if (day === 6) { // Saturday
             date.setDate(date.getDate() - 1); // Go back to Friday
-        } else { // Any other day
-            date.setDate(date.getDate() - 0); // Go back one day
         }
         return date;
     }
@@ -367,20 +365,53 @@
         // Get visible rows and create buttons for each row
         const visibleRows = getVisibleRows();
         visibleRows.forEach((row, index) => {
-            const firstCell = row.querySelector('tr > td[class*="Link1"]');
+            const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
+            
+            let textToDisplay = '';
+            // Use the 5th column (index 4) as requested by the user
+            if (cells.length >= 5) {
+                textToDisplay = cells[4].textContent.trim();
+            } else {
+                // Fallback if 5th column is not found
+                for (let i = cells.length - 1; i >= 0; i--) {
+                    const cellText = cells[i].textContent.trim();
+                    if (cellText) {
+                        textToDisplay = cellText;
+                        break;
+                    }
+                }
+            }
+
+            const firstCell = cells[0];
             if (firstCell) {
                 const rowNum = parseInt(firstCell.innerText, 10);
                 if (!isNaN(rowNum)) {
+                    const rowContainer = document.createElement('div');
+                    rowContainer.style.display = 'flex';
+                    rowContainer.style.alignItems = 'center';
+                    rowContainer.style.gap = '10px';
+                    rowContainer.style.marginBottom = '2px';
+
                     const numButton = document.createElement('button');
                     numButton.innerText = rowNum;
-                    numButton.style.padding = '5px 10px';
+                    numButton.style.padding = '3px 8px';
                     numButton.style.backgroundColor = '#6c757d';
                     numButton.style.color = 'white';
                     numButton.style.border = 'none';
                     numButton.style.borderRadius = '3px';
                     numButton.style.cursor = 'pointer';
                     numButton.style.minWidth = '30px';
-                    numberContainer.appendChild(numButton);
+                    numButton.style.fontSize = '11px';
+                    
+                    const labelSpan = document.createElement('span');
+                    labelSpan.innerText = textToDisplay;
+                    labelSpan.style.fontSize = '11px';
+                    labelSpan.style.color = '#333';
+                    labelSpan.style.whiteSpace = 'nowrap';
+
+                    rowContainer.appendChild(numButton);
+                    rowContainer.appendChild(labelSpan);
+                    numberContainer.appendChild(rowContainer);
 
                     numButton.addEventListener('click', function() {
                         copyRowData(index);
@@ -502,9 +533,9 @@
         copyContainer.appendChild(mainCopyButton);
 
         const numberContainer = document.createElement('div');
-        numberContainer.style.display = 'grid';
-        numberContainer.style.gridTemplateColumns = 'repeat(4, 1fr)';
-        numberContainer.style.gap = '5px';
+        numberContainer.style.display = 'flex';
+        numberContainer.style.flexDirection = 'column';
+        numberContainer.style.gap = '2px';
         numberContainer.style.marginTop = '5px';
         copyContainer.appendChild(numberContainer);
 
