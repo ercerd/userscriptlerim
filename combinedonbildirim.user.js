@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.196
+// @version      2.197
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -370,9 +370,9 @@
             const cells = Array.from(row.querySelectorAll('td'));
             
             let textToDisplay = '';
-            // "Ön Bildirim Numarası" is Header 4 (index 3)
-            if (cells.length >= 4) {
-                textToDisplay = cells[3].textContent.trim();
+            // "Ön Bildirim Numarası" is index 4 (5th column based on screenshot observation)
+            if (cells.length >= 5) {
+                textToDisplay = cells[4].textContent.trim();
             } else {
                 // Fallback to any Link1 if table structure search fails
                 const linkCells = Array.from(row.querySelectorAll('td[class*="Link1"]'));
