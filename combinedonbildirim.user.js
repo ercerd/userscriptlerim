@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.194
+// @version      2.195
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -182,12 +182,17 @@
             const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
 
             let textToCopy = null;
-            // Find the first cell with text content (starting from the end)
-            for (let i = cells.length - 1; i >= 0; i--) {
-                const cellText = cells[i].textContent.trim();
-                if (cellText) {
-                    textToCopy = cellText;
-                    break;
+            // Use logical column index 4 (5th column) if available
+            if (cells.length >= 5) {
+                textToCopy = cells[4].textContent.trim().replace(/\s/g, '');
+            } else {
+                // Fallback to searching from the end
+                for (let i = cells.length - 1; i >= 0; i--) {
+                    const cellText = cells[i].textContent.trim().replace(/\s/g, '');
+                    if (cellText) {
+                        textToCopy = cellText;
+                        break;
+                    }
                 }
             }
 
