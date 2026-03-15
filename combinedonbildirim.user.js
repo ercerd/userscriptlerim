@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.195
+// @version      2.196
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -182,22 +182,18 @@
             const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
 
             let textToCopy = null;
-            // Use logical column index 4 (5th column) if available
-            if (cells.length >= 5) {
-                textToCopy = cells[4].textContent.trim().replace(/\s/g, '');
-            } else {
-                // Fallback to searching from the end
-                for (let i = cells.length - 1; i >= 0; i--) {
-                    const cellText = cells[i].textContent.trim().replace(/\s/g, '');
-                    if (cellText) {
-                        textToCopy = cellText;
-                        break;
-                    }
+            // Robust search: Look for a long numeric string (typical GGBS ID length) in the row
+            // We search from the last cell backward as the ID is usually near the end
+            for (let i = cells.length - 1; i >= 0; i--) {
+                const cellText = cells[i].textContent.trim().replace(/\D/g, '');
+                if (cellText.length >= 15) { // The example numeric IDs are 20+ digits
+                    textToCopy = cellText;
+                    break;
                 }
             }
 
-            const isNumeric = /^\d+$/.test(textToCopy);
-            if (textToCopy && isNumeric) {
+            const isNumeric = textToCopy && /^\d+$/.test(textToCopy);
+            if (isNumeric) {
                 // Check for Clipboard API support (requires secure context - HTTPS)
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(textToCopy).then(function() {
@@ -371,21 +367,16 @@
         // Get visible rows and create buttons for each row
         const visibleRows = getVisibleRows();
         visibleRows.forEach((row, index) => {
-            const cells = Array.from(row.querySelectorAll('tr > td[class*="Link1"]'));
+            const cells = Array.from(row.querySelectorAll('td'));
             
             let textToDisplay = '';
-            // Use the 5th column (index 4) as requested by the user
-            if (cells.length >= 5) {
-                textToDisplay = cells[4].textContent.trim();
+            // "Ön Bildirim Numarası" is Header 4 (index 3)
+            if (cells.length >= 4) {
+                textToDisplay = cells[3].textContent.trim();
             } else {
-                // Fallback if 5th column is not found
-                for (let i = cells.length - 1; i >= 0; i--) {
-                    const cellText = cells[i].textContent.trim();
-                    if (cellText) {
-                        textToDisplay = cellText;
-                        break;
-                    }
-                }
+                // Fallback to any Link1 if table structure search fails
+                const linkCells = Array.from(row.querySelectorAll('td[class*="Link1"]'));
+                textToDisplay = linkCells.length > 0 ? linkCells[0].textContent.trim() : '';
             }
 
             const firstCell = cells[0];
