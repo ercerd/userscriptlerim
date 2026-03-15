@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.193
+// @version      2.194
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -191,7 +191,8 @@
                 }
             }
 
-            if (textToCopy) {
+            const isNumeric = /^\d+$/.test(textToCopy);
+            if (textToCopy && isNumeric) {
                 // Check for Clipboard API support (requires secure context - HTTPS)
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(textToCopy).then(function() {
@@ -227,7 +228,7 @@
                     }
                 }
             } else {
-                showToast('Satırda kopyalanacak veri bulunamadı.', 'error');
+                showToast('Hatalı Veri: Sadece numara kopyalanabilir.', 'error');
             }
         } else {
             showToast('İstenen satır bulunamadı (görünür değil veya mevcut değil).', 'error');
