@@ -13,7 +13,7 @@
 
 /* globals jQuery, $, waitForKeyElements */
 
-(function() {
+(function () {
     'use strict';
 
     // ==================== UTILITY FUNCTIONS ====================
@@ -196,10 +196,10 @@
             if (isNumeric) {
                 // Check for Clipboard API support (requires secure context - HTTPS)
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(textToCopy).then(function() {
+                    navigator.clipboard.writeText(textToCopy).then(function () {
                         console.log('Kopyalandı:', textToCopy);
                         showToast('Kopyalandı: ' + textToCopy);
-                    }, function(err) {
+                    }, function (err) {
                         console.error('Kopyalanamadı (Clipboard API): ', err);
                         showToast('Kopyalanamadı.', 'error');
                     });
@@ -368,7 +368,7 @@
         const visibleRows = getVisibleRows();
         visibleRows.forEach((row, index) => {
             const cells = Array.from(row.querySelectorAll('td'));
-            
+
             let textToDisplay = '';
             // "Ön Bildirim Numarası" is index 4 (5th column based on screenshot observation)
             if (cells.length >= 5) {
@@ -399,7 +399,7 @@
                     numButton.style.cursor = 'pointer';
                     numButton.style.minWidth = '30px';
                     numButton.style.fontSize = '11px';
-                    
+
                     const labelSpan = document.createElement('span');
                     labelSpan.innerText = textToDisplay;
                     labelSpan.style.fontSize = '11px';
@@ -410,7 +410,7 @@
                     rowContainer.appendChild(labelSpan);
                     numberContainer.appendChild(rowContainer);
 
-                    numButton.addEventListener('click', function() {
+                    numButton.addEventListener('click', function () {
                         copyRowData(index);
                     });
                 }
@@ -574,13 +574,13 @@
     // Main initialization function
     function initialize() {
         console.log("Page fully loaded - initializing script...");
-        
+
         // Create buttons
         createButtons();
-        
+
         // Auto-fill captcha
         autofillCaptcha();
-        
+
         // Update fields and start monitoring
         updateFields();
         waitForElements();
