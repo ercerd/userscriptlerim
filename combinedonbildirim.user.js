@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.197
+// @version      2.198
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -229,7 +229,7 @@
                     }
                 }
             } else {
-                showToast('Hatalı Veri: Sadece numara kopyalanabilir.', 'error');
+                showToast('Hatalı Veri: ID bulunamadı.', 'error');
             }
         } else {
             showToast('İstenen satır bulunamadı (görünür değil veya mevcut değil).', 'error');
@@ -299,6 +299,12 @@
     // Function to handle Sertifika İndir button click
     function handleSertifikaClick() {
         try {
+            const sertifikaDosyaElement = document.querySelector('td#SERTIFIKADOSYA');
+            if (sertifikaDosyaElement && sertifikaDosyaElement.textContent.trim().includes('Yüklü Sertifika Yok')) {
+                showToast('Sertifika bulunmuyor.', 'error');
+                return;
+            }
+
             const sertifikaButtonElement = document.querySelector('img[name="Button_Sertifika_gost"]');
             if (sertifikaButtonElement) {
                 sertifikaButtonElement.click();
@@ -335,6 +341,12 @@
     // Function to handle Etiket İndir button click
     function handleEtiketClick() {
         try {
+            const etiketDosyaElement = document.querySelector('td#ETIKETDOSYA');
+            if (etiketDosyaElement && etiketDosyaElement.textContent.trim().includes('Yüklü Etiket Yok')) {
+                showToast('Etiket bulunmuyor.', 'error');
+                return;
+            }
+
             const etiketButtonElement = document.querySelector('img[name="Button_Etiket_gost"]');
             if (etiketButtonElement) {
                 etiketButtonElement.click();
@@ -418,142 +430,173 @@
         });
     }
 
+    // Function to detect if current page is "Ön Bildirim Sorgulama"
+    function isOnBildirimSorgulamaPage() {
+        const titleSpan = document.querySelector('span.c12');
+        return titleSpan && titleSpan.textContent.trim() === 'Ön Bildirim Sorgulama';
+    }
+
     // Function to create and position buttons
     function createButtons() {
-        const anchorElement = document.querySelector('table[width="1051"]');
+        // Try multiple anchor tables for different page layouts
+        const anchorElement = document.querySelector('table[width="1236"]')
+            || document.querySelector('table[width="1051"]')
+            || document.querySelector('table[width="1221"]');
+        const isSorgulamaPage = isOnBildirimSorgulamaPage();
         const buttonContainer = document.createElement('div');
-        buttonContainer.style.position = 'fixed';
-        buttonContainer.style.top = '30px';
         buttonContainer.style.zIndex = 1000;
         buttonContainer.style.display = 'flex';
         buttonContainer.style.flexDirection = 'column';
         buttonContainer.style.gap = '10px';
 
-        if (anchorElement) {
-            const rect = anchorElement.getBoundingClientRect();
-            buttonContainer.style.left = (rect.right + 15) + 'px';
+        if (isSorgulamaPage) {
+            // Absolute positioning: scrolls with the page content
+            buttonContainer.style.position = 'absolute';
+            if (anchorElement) {
+                const rect = anchorElement.getBoundingClientRect();
+                buttonContainer.style.left = (rect.right + window.scrollX + 15) + 'px';
+                buttonContainer.style.top = (rect.top + window.scrollY) + 'px';
+            } else {
+                buttonContainer.style.right = '10px';
+                buttonContainer.style.top = '30px';
+            }
         } else {
-            console.log("Ana içerik kolonu (width=1051) bulunamadı, butonlar varsayılan konuma yerleştiriliyor.");
-            buttonContainer.style.right = '10px';
+            // Fixed positioning: stays in place on other pages
+            buttonContainer.style.position = 'fixed';
+            buttonContainer.style.top = '30px';
+            if (anchorElement) {
+                const rect = anchorElement.getBoundingClientRect();
+                buttonContainer.style.left = (rect.right + 15) + 'px';
+            } else {
+                buttonContainer.style.right = '10px';
+            }
         }
 
         document.body.appendChild(buttonContainer);
 
-        // Create Ürün_Ham button
-        const urunHamButton = document.createElement('button');
-        urunHamButton.innerText = 'Ürün_Ham';
-        urunHamButton.style.padding = '10px 20px';
-        urunHamButton.style.backgroundColor = '#4CAF50';
-        urunHamButton.style.color = 'white';
-        urunHamButton.style.border = 'none';
-        urunHamButton.style.borderRadius = '5px';
-        urunHamButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(urunHamButton);
-        urunHamButton.addEventListener('click', handleUrunHamClick);
+        // Create Ürün_Ham button (only on Ön Bildirim Sorgulama page)
+        if (isSorgulamaPage) {
+            const urunHamButton = document.createElement('button');
+            urunHamButton.innerText = 'Ürün_Ham';
+            urunHamButton.style.padding = '10px 20px';
+            urunHamButton.style.backgroundColor = '#4CAF50';
+            urunHamButton.style.color = 'white';
+            urunHamButton.style.border = 'none';
+            urunHamButton.style.borderRadius = '5px';
+            urunHamButton.style.cursor = 'pointer';
+            buttonContainer.appendChild(urunHamButton);
+            urunHamButton.addEventListener('click', handleUrunHamClick);
+        }
 
-        // Create Sevkiyat_Ham button
-        const sevkiyatHamButton = document.createElement('button');
-        sevkiyatHamButton.innerText = 'Sevkiyat_Ham';
-        sevkiyatHamButton.style.padding = '10px 20px';
-        sevkiyatHamButton.style.backgroundColor = '#008CBA';
-        sevkiyatHamButton.style.color = 'white';
-        sevkiyatHamButton.style.border = 'none';
-        sevkiyatHamButton.style.borderRadius = '5px';
-        sevkiyatHamButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(sevkiyatHamButton);
-        sevkiyatHamButton.addEventListener('click', handleSevkiyatHamClick);
+        // Create Sevkiyat_Ham button (only on Ön Bildirim Sorgulama page)
+        if (isSorgulamaPage) {
+            const sevkiyatHamButton = document.createElement('button');
+            sevkiyatHamButton.innerText = 'Sevkiyat_Ham';
+            sevkiyatHamButton.style.padding = '10px 20px';
+            sevkiyatHamButton.style.backgroundColor = '#008CBA';
+            sevkiyatHamButton.style.color = 'white';
+            sevkiyatHamButton.style.border = 'none';
+            sevkiyatHamButton.style.borderRadius = '5px';
+            sevkiyatHamButton.style.cursor = 'pointer';
+            buttonContainer.appendChild(sevkiyatHamButton);
+            sevkiyatHamButton.addEventListener('click', handleSevkiyatHamClick);
+        }
 
-        // Create Sertifika İndir button
-        const sertifikaButton = document.createElement('button');
-        sertifikaButton.innerText = 'Sertifika İndir';
-        sertifikaButton.style.padding = '10px 20px';
-        sertifikaButton.style.backgroundColor = '#f44336';
-        sertifikaButton.style.color = 'white';
-        sertifikaButton.style.border = 'none';
-        sertifikaButton.style.borderRadius = '5px';
-        sertifikaButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(sertifikaButton);
-        sertifikaButton.addEventListener('click', handleSertifikaClick);
+        // Create Sertifika, İçerik, Etiket İndir buttons (only on non-Sorgulama pages)
+        if (!isSorgulamaPage) {
+            const sertifikaButton = document.createElement('button');
+            sertifikaButton.innerText = 'Sertifika İndir';
+            sertifikaButton.style.padding = '10px 20px';
+            sertifikaButton.style.backgroundColor = '#f44336';
+            sertifikaButton.style.color = 'white';
+            sertifikaButton.style.border = 'none';
+            sertifikaButton.style.borderRadius = '5px';
+            sertifikaButton.style.cursor = 'pointer';
+            buttonContainer.appendChild(sertifikaButton);
+            sertifikaButton.addEventListener('click', handleSertifikaClick);
 
-        // Create İçerik İndir button
-        const icerikButton = document.createElement('button');
-        icerikButton.innerText = 'İçerik İndir';
-        icerikButton.style.padding = '10px 20px';
-        icerikButton.style.backgroundColor = 'green';
-        icerikButton.style.color = 'white';
-        icerikButton.style.border = 'none';
-        icerikButton.style.borderRadius = '5px';
-        icerikButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(icerikButton);
-        icerikButton.addEventListener('click', handleIcerikClick);
+            const icerikButton = document.createElement('button');
+            icerikButton.innerText = 'İçerik İndir';
+            icerikButton.style.padding = '10px 20px';
+            icerikButton.style.backgroundColor = 'green';
+            icerikButton.style.color = 'white';
+            icerikButton.style.border = 'none';
+            icerikButton.style.borderRadius = '5px';
+            icerikButton.style.cursor = 'pointer';
+            buttonContainer.appendChild(icerikButton);
+            icerikButton.addEventListener('click', handleIcerikClick);
 
-        // Create Etiket İndir button
-        const etiketButton = document.createElement('button');
-        etiketButton.innerText = 'Etiket İndir';
-        etiketButton.style.padding = '10px 20px';
-        etiketButton.style.backgroundColor = '#9c27b0';
-        etiketButton.style.color = 'white';
-        etiketButton.style.border = 'none';
-        etiketButton.style.borderRadius = '5px';
-        etiketButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(etiketButton);
-        etiketButton.addEventListener('click', handleEtiketClick);
+            const etiketButton = document.createElement('button');
+            etiketButton.innerText = 'Etiket İndir';
+            etiketButton.style.padding = '10px 20px';
+            etiketButton.style.backgroundColor = '#9c27b0';
+            etiketButton.style.color = 'white';
+            etiketButton.style.border = 'none';
+            etiketButton.style.borderRadius = '5px';
+            etiketButton.style.cursor = 'pointer';
+            buttonContainer.appendChild(etiketButton);
+            etiketButton.addEventListener('click', handleEtiketClick);
+        }
 
-        // Create Formu Sıfırla button
-        const resetButton = document.createElement('button');
-        resetButton.innerText = 'Formu Sıfırla';
-        resetButton.style.padding = '10px 20px';
-        resetButton.style.backgroundColor = '#555';
-        resetButton.style.color = 'white';
-        resetButton.style.border = 'none';
-        resetButton.style.borderRadius = '5px';
-        resetButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(resetButton);
-        resetButton.addEventListener('click', handleResetClick);
+        // Create Formu Sıfırla button (only on Ön Bildirim Sorgulama page)
+        if (isSorgulamaPage) {
+            const resetButton = document.createElement('button');
+            resetButton.innerText = 'Formu Sıfırla';
+            resetButton.style.padding = '10px 20px';
+            resetButton.style.backgroundColor = '#555';
+            resetButton.style.color = 'white';
+            resetButton.style.border = 'none';
+            resetButton.style.borderRadius = '5px';
+            resetButton.style.cursor = 'pointer';
+            buttonContainer.appendChild(resetButton);
+            resetButton.addEventListener('click', handleResetClick);
+        }
 
-        // Create ID Kopyala buttons container
-        const copyContainer = document.createElement('div');
-        copyContainer.style.marginTop = '15px';
-        copyContainer.style.border = '1px solid #ccc';
-        copyContainer.style.padding = '5px';
-        copyContainer.style.borderRadius = '5px';
-        buttonContainer.appendChild(copyContainer);
+        // Create ID Kopyala buttons container (only on Ön Bildirim Sorgulama page)
+        if (isSorgulamaPage) {
+            const copyContainer = document.createElement('div');
+            copyContainer.style.marginTop = '15px';
+            copyContainer.style.border = '1px solid #ccc';
+            copyContainer.style.padding = '5px';
+            copyContainer.style.borderRadius = '5px';
+            buttonContainer.appendChild(copyContainer);
 
-        const mainCopyButton = document.createElement('button');
-        mainCopyButton.innerText = 'ID Kopyala';
-        mainCopyButton.style.padding = '10px 20px';
-        mainCopyButton.style.backgroundColor = '#ffc107';
-        mainCopyButton.style.color = 'black';
-        mainCopyButton.style.border = 'none';
-        mainCopyButton.style.borderRadius = '5px';
-        mainCopyButton.style.width = '100%';
-        copyContainer.appendChild(mainCopyButton);
+            const mainCopyButton = document.createElement('button');
+            mainCopyButton.innerText = 'ID Kopyala';
+            mainCopyButton.style.padding = '10px 20px';
+            mainCopyButton.style.backgroundColor = '#ffc107';
+            mainCopyButton.style.color = 'black';
+            mainCopyButton.style.border = 'none';
+            mainCopyButton.style.borderRadius = '5px';
+            mainCopyButton.style.width = '100%';
+            copyContainer.appendChild(mainCopyButton);
 
-        const numberContainer = document.createElement('div');
-        numberContainer.style.display = 'flex';
-        numberContainer.style.flexDirection = 'column';
-        numberContainer.style.gap = '2px';
-        numberContainer.style.marginTop = '5px';
-        copyContainer.appendChild(numberContainer);
+            const numberContainer = document.createElement('div');
+            numberContainer.style.display = 'flex';
+            numberContainer.style.flexDirection = 'column';
+            numberContainer.style.gap = '2px';
+            numberContainer.style.marginTop = '5px';
+            copyContainer.appendChild(numberContainer);
 
-        // Initial creation of ID copy buttons
-        createIdCopyButtons(numberContainer);
+            // Initial creation of ID copy buttons
+            createIdCopyButtons(numberContainer);
 
-        // Use MutationObserver to detect changes in the table and update buttons
-        const observerTarget = document.querySelector('table[mo\\:type="ProcessRecord"]');
-        if (observerTarget) {
-            const observer = new MutationObserver(() => {
-                console.log("Tablo içeriği değişti. ID kopyala butonları yeniden oluşturuluyor...");
-                createIdCopyButtons(numberContainer);
-            });
+            // Use MutationObserver to detect changes in the table and update buttons
+            const observerTarget = document.querySelector('table[mo\\:type="ProcessRecord"]');
+            if (observerTarget) {
+                const observer = new MutationObserver(() => {
+                    console.log("Tablo içeriği değişti. ID kopyala butonları yeniden oluşturuluyor...");
+                    createIdCopyButtons(numberContainer);
+                });
 
-            observer.observe(observerTarget, {
-                childList: true,
-                subtree: true,
-                attributes: true
-            });
-        } else {
-            console.warn("Hedef tablo bulunamadı. ID kopyala butonları oluşturulamıyor.");
+                observer.observe(observerTarget, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true
+                });
+            } else {
+                console.warn("Hedef tablo bulunamadı. ID kopyala butonları oluşturulamıyor.");
+            }
         }
     }
 
