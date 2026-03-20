@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGBS AnaMenu Sidebar (Modern Paste Test)
 // @namespace    http://tampermonkey.net/
-// @version      1.28
+// @version      1.29
 // @description  Adds a sidebar with buttons to select specific values from dropdowns in any iframe and click a specific button (Test file for modern paste)
 // @author       Your Name
 // @match        http://172.20.20.103/cis/servlet/StartCISPage?PAGEURL=/FSIS/ggbs.giris.html&POPUPTITLE=AnaMenu
@@ -824,7 +824,9 @@
         }
     };
 
-    const numuneGenelBilgiler = (iframeDocument) => {
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const numuneGenelBilgiler = async (iframeDocument) => {
         if (!iframeDocument) {
             GM_log('Target iframe for Numune Genel Bilgiler not found or not visible');
             return Promise.reject('Target iframe not found');
@@ -858,150 +860,171 @@
             triggerEvent(field161, 'change');
             triggerEvent(field161, 'input');
         }
-        return selectDropdown(iframeDocument, 'CDYN_117', 1);
+        await delay(300); // Ajax güncellemelerini bekle
+        return selectDropdown(iframeDocument, 'CDYN_117', 1, { delayMs: 400 });
     };
 
     // DEĞİŞTİRİLDİ: Artık index yerine metin bazlı arama yapıyor
-    const triggerAdditionalButton = (iframeDocument, searchText) => {
+    const triggerAdditionalButton = async (iframeDocument, searchText) => {
         if (!searchText || !iframeDocument) {
             GM_log('Invalid searchText or iframeDocument for triggerAdditionalButton');
             return;
         }
 
-        selectLabByText(iframeDocument, 'CDYN_150', searchText)
-            .then(() => {
-                GM_log(`Laboratuvar '${searchText}' başarıyla seçildi`);
-            })
-            .catch(error => {
-                GM_log(`Laboratuvar seçiminde hata: ${error}`);
-                alert(`Laboratuvar metni '${searchText}' bulunamadı. Lütfen geçerli bir metin girin.`);
-            });
+        try {
+            await selectLabByText(iframeDocument, 'CDYN_150', searchText);
+            GM_log(`Laboratuvar '${searchText}' başarıyla seçildi`);
+        } catch (error) {
+            GM_log(`Laboratuvar seçiminde hata: ${error}`);
+            alert(`Laboratuvar metni '${searchText}' bulunamadı. Lütfen geçerli bir metin girin.`);
+        }
     };
 
-    const numuneKgAction = () => {
-        const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
-        return numuneGenelBilgiler(iframeDocument)
-            .then(() => {
-                if (!iframeDocument) {
-                    GM_log('Target iframe for KG Numune Bilgileri not found or not visible');
-                    return;
-                }
-                return selectDropdown(iframeDocument, 'CDYN_135', 1, { byValue: true, delayMs: 250 })
-                    .then(() => selectDropdown(iframeDocument, 'CDYN_137', 3, { byValue: true }))
-                    .then(() => selectDropdown(iframeDocument, 'CDYN_144', 3, { byValue: true }))
-                    .then(() => {
-                        const startDate = `${currentDate} 09:00`;
-                        const field172 = iframeDocument.getElementById('F_172');
-                        if (field172) {
-                            field172.value = startDate;
-                            triggerEvent(field172, 'change');
-                            triggerEvent(field172, 'input');
-                        }
-                        const field133 = iframeDocument.getElementById('F_133');
-                        const field140 = iframeDocument.getElementById('F_140');
-                        if (field133) {
-                            field133.value = '';
-                            triggerEvent(field133, 'change');
-                            triggerEvent(field133, 'input');
-                        }
-                        if (field140) {
-                            field140.value = '';
-                            triggerEvent(field140, 'change');
-                            triggerEvent(field140, 'input');
-                        }
-                    });
-            })
-            .then(() => {
-                const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
-                if (additionalButtonLabel) {
-                    triggerAdditionalButton(iframeDocument, additionalButtonLabel);
-                }
-            })
-            .catch(error => GM_log('Error in numuneKgAction: ' + error));
+    const numuneKgAction = async () => {
+        try {
+            const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
+            if (!iframeDocument) {
+                GM_log('Target iframe for KG Numune Bilgileri not found or not visible');
+                return;
+            }
+            
+            await numuneGenelBilgiler(iframeDocument);
+            
+            await selectDropdown(iframeDocument, 'CDYN_135', 1, { byValue: true, delayMs: 400 });
+            await selectDropdown(iframeDocument, 'CDYN_137', 3, { byValue: true, delayMs: 400 });
+            await selectDropdown(iframeDocument, 'CDYN_144', 3, { byValue: true, delayMs: 400 });
+            
+            await delay(300); // DOM ve Ajax için ek bekleme
+            
+            const startDate = `${currentDate} 09:00`;
+            const field172 = iframeDocument.getElementById('F_172');
+            if (field172) {
+                field172.value = startDate;
+                triggerEvent(field172, 'change');
+                triggerEvent(field172, 'input');
+            }
+            
+            const field133 = iframeDocument.getElementById('F_133');
+            const field140 = iframeDocument.getElementById('F_140');
+            if (field133) {
+                field133.value = '';
+                triggerEvent(field133, 'change');
+                triggerEvent(field133, 'input');
+            }
+            if (field140) {
+                field140.value = '';
+                triggerEvent(field140, 'change');
+                triggerEvent(field140, 'input');
+            }
+            
+            await delay(400); // Buton öncesi bekleme
+            
+            const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
+            if (additionalButtonLabel) {
+                await triggerAdditionalButton(iframeDocument, additionalButtonLabel);
+            }
+            
+        } catch (error) {
+            GM_log('Error in numuneKgAction: ' + error);
+        }
     };
 
-    const numuneAdetAction = () => {
-        const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
-        return numuneGenelBilgiler(iframeDocument)
-            .then(() => {
-                if (!iframeDocument) {
-                    GM_log('Target iframe for Adet Numune Bilgileri not found or not visible');
-                    return;
-                }
-                return selectDropdown(iframeDocument, 'CDYN_135', 25, { byValue: true, delayMs: 250 })
-                    .then(() => selectDropdown(iframeDocument, 'CDYN_137', 49, { byValue: true }))
-                    .then(() => selectDropdown(iframeDocument, 'CDYN_144', 49, { byValue: true }))
-                    .then(() => {
-                        const startDate = `${currentDate} 09:00`;
-                        const field172 = iframeDocument.getElementById('F_172');
-                        if (field172) {
-                            field172.value = startDate;
-                            triggerEvent(field172, 'change');
-                            triggerEvent(field172, 'input');
-                        }
-                        const field133 = iframeDocument.getElementById('F_133');
-                        const field140 = iframeDocument.getElementById('F_140');
-                        if (field133) {
-                            field133.value = '';
-                            triggerEvent(field133, 'change');
-                            triggerEvent(field133, 'input');
-                        }
-                        if (field140) {
-                            field140.value = '';
-                            triggerEvent(field140, 'change');
-                            triggerEvent(field140, 'input');
-                        }
-                    });
-            })
-            .then(() => {
-                const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
-                if (additionalButtonLabel) {
-                    triggerAdditionalButton(iframeDocument, additionalButtonLabel);
-                }
-            })
-            .catch(error => GM_log('Error in numuneAdetAction: ' + error));
+    const numuneAdetAction = async () => {
+        try {
+            const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
+            if (!iframeDocument) {
+                GM_log('Target iframe for Adet Numune Bilgileri not found or not visible');
+                return;
+            }
+            
+            await numuneGenelBilgiler(iframeDocument);
+            
+            await selectDropdown(iframeDocument, 'CDYN_135', 25, { byValue: true, delayMs: 400 });
+            await selectDropdown(iframeDocument, 'CDYN_137', 49, { byValue: true, delayMs: 400 });
+            await selectDropdown(iframeDocument, 'CDYN_144', 49, { byValue: true, delayMs: 400 });
+            
+            await delay(300);
+            
+            const startDate = `${currentDate} 09:00`;
+            const field172 = iframeDocument.getElementById('F_172');
+            if (field172) {
+                field172.value = startDate;
+                triggerEvent(field172, 'change');
+                triggerEvent(field172, 'input');
+            }
+            
+            const field133 = iframeDocument.getElementById('F_133');
+            const field140 = iframeDocument.getElementById('F_140');
+            if (field133) {
+                field133.value = '';
+                triggerEvent(field133, 'change');
+                triggerEvent(field133, 'input');
+            }
+            if (field140) {
+                field140.value = '';
+                triggerEvent(field140, 'change');
+                triggerEvent(field140, 'input');
+            }
+            
+            await delay(400);
+            
+            const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
+            if (additionalButtonLabel) {
+                await triggerAdditionalButton(iframeDocument, additionalButtonLabel);
+            }
+            
+        } catch (error) {
+            GM_log('Error in numuneAdetAction: ' + error);
+        }
     };
 
-    const numuneLitreAction = () => {
-        const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
-        return numuneGenelBilgiler(iframeDocument)
-            .then(() => {
-                if (!iframeDocument) {
-                    GM_log('Target iframe for Litre Numune Bilgileri not found or not visible');
-                    return;
-                }
-                return selectDropdown(iframeDocument, 'CDYN_135', 2, { byValue: true, delayMs: 250 })
-                    .then(() => selectDropdown(iframeDocument, 'CDYN_137', 13, { byValue: true }))
-                    .then(() => selectDropdown(iframeDocument, 'CDYN_144', 13, { byValue: true }))
-                    .then(() => {
-                        const startDate = `${currentDate} 09:00`;
-                        const field172 = iframeDocument.getElementById('F_172');
-                        if (field172) {
-                            field172.value = startDate;
-                            triggerEvent(field172, 'change');
-                            triggerEvent(field172, 'input');
-                        }
-                        const field133 = iframeDocument.getElementById('F_133');
-                        const field140 = iframeDocument.getElementById('F_140');
-                        if (field133) {
-                            field133.value = '';
-                            triggerEvent(field133, 'change');
-                            triggerEvent(field133, 'input');
-                        }
-                        if (field140) {
-                            field140.value = '';
-                            triggerEvent(field140, 'change');
-                            triggerEvent(field140, 'input');
-                        }
-                    });
-            })
-            .then(() => {
-                const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
-                if (additionalButtonLabel) {
-                    triggerAdditionalButton(iframeDocument, additionalButtonLabel);
-                }
-            })
-            .catch(error => GM_log('Error in numuneLitreAction: ' + error));
+    const numuneLitreAction = async () => {
+        try {
+            const iframeDocument = findTargetIframe('ggbs.numune.numune.html');
+            if (!iframeDocument) {
+                GM_log('Target iframe for Litre Numune Bilgileri not found or not visible');
+                return;
+            }
+            
+            await numuneGenelBilgiler(iframeDocument);
+            
+            await selectDropdown(iframeDocument, 'CDYN_135', 2, { byValue: true, delayMs: 400 });
+            await selectDropdown(iframeDocument, 'CDYN_137', 13, { byValue: true, delayMs: 400 });
+            await selectDropdown(iframeDocument, 'CDYN_144', 13, { byValue: true, delayMs: 400 });
+            
+            await delay(300);
+            
+            const startDate = `${currentDate} 09:00`;
+            const field172 = iframeDocument.getElementById('F_172');
+            if (field172) {
+                field172.value = startDate;
+                triggerEvent(field172, 'change');
+                triggerEvent(field172, 'input');
+            }
+            
+            const field133 = iframeDocument.getElementById('F_133');
+            const field140 = iframeDocument.getElementById('F_140');
+            if (field133) {
+                field133.value = '';
+                triggerEvent(field133, 'change');
+                triggerEvent(field133, 'input');
+            }
+            if (field140) {
+                field140.value = '';
+                triggerEvent(field140, 'change');
+                triggerEvent(field140, 'input');
+            }
+            
+            await delay(400);
+            
+            const additionalButtonLabel = prompt("Lütfen laboratuvar adını veya başlangıç harflerini girin (örn. ANKARA, İSTANBUL, İNTERNEK):");
+            if (additionalButtonLabel) {
+                await triggerAdditionalButton(iframeDocument, additionalButtonLabel);
+            }
+            
+        } catch (error) {
+            GM_log('Error in numuneLitreAction: ' + error);
+        }
     };
 
     // ÖNEMLİ DEĞİŞİKLİK: numuneLabGonderAction fonksiyonu yeniden yazıldı
