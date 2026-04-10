@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGBS AnaMenu Sidebar (Modern Paste Test)
 // @namespace    http://tampermonkey.net/
-// @version      1.29
+// @version      1.30
 // @description  Adds a sidebar with buttons to select specific values from dropdowns in any iframe and click a specific button (Test file for modern paste)
 // @author       Your Name
 // @match        http://172.20.20.103/cis/servlet/StartCISPage?PAGEURL=/FSIS/ggbs.giris.html&POPUPTITLE=AnaMenu
@@ -494,45 +494,23 @@
                 GM_log('F_32 input alanı etkinleşti.');
             }
 
+            // Her zaman modal göster — Firefox/Chrome clipboard uyumsuzluğunu önler
             inputField.focus();
-            let textToPaste = null;
             const onbildirimRegex = /^\d{2}-\d{6,8}-\d{1,4}$/;
 
-            if (location.protocol === 'https:' && navigator.clipboard && navigator.clipboard.readText) {
-                try {
-                    textToPaste = await navigator.clipboard.readText();
-                    if (!onbildirimRegex.test(textToPaste)) {
-                        GM_log('Panodan okunan metin önbildirim formatında değil. Kullanıcıdan manuel giriş istenecek.');
-                        textToPaste = null;
-                    }
-                } catch (error) {
-                    GM_log('Panodan metin okuma yetkisi reddedildi veya başka bir hata oluştu: ' + error);
-                    textToPaste = null;
-                }
-            } else {
-                GM_log('HTTP ortamında veya Clipboard API desteklenmiyor. Kullanıcıdan manuel giriş istenecek.');
-            }
-
-            if (textToPaste) {
-                inputField.value = textToPaste;
+            const userInput = await showCustomPrompt('Lütfen Önbildirim numarasını giriniz (örn. 20-110236-300). Panodan yapıştırmak için Ctrl+V kullanın:');
+            if (userInput && onbildirimRegex.test(userInput.trim())) {
+                inputField.value = userInput.trim();
                 triggerEvent(inputField, 'change');
                 triggerEvent(inputField, 'input');
-                GM_log('F_32 input alanına panodaki metin yapıştırıldı: ' + textToPaste);
+                GM_log('F_32 input alanına metin girildi: ' + userInput.trim());
+            } else if (userInput) {
+                GM_log('Girilen metin önbildirim formatında değil: ' + userInput);
+                alert('Hatalı format! Lütfen doğru formatta bir önbildirim numarası girin (örn. 20-110236-300).');
+                throw new Error('Hatalı önbildirim formatı');
             } else {
-                const userInput = await showCustomPrompt('Lütfen Önbildirim numarasını giriniz (örn. 20-110236-300). Panodan yapıştırmak için Ctrl+V kullanın:');
-                if (userInput && onbildirimRegex.test(userInput)) {
-                    inputField.value = userInput;
-                    triggerEvent(inputField, 'change');
-                    triggerEvent(inputField, 'input');
-                    GM_log('F_32 input alanına kullanıcı metni yapıştırıldı: ' + userInput);
-                } else if (userInput) {
-                    GM_log('Girilen metin önbildirim formatında değil: ' + userInput);
-                    alert('Hatalı format! Lütfen doğru formatta bir önbildirim numarası girin.');
-                    throw new Error('Hatalı önbildirim formatı');
-                } else {
-                    GM_log('Kullanıcı metin girmedi veya iptal etti.');
-                    throw new Error('Metin girilmedi');
-                }
+                GM_log('Kullanıcı metin girmedi veya iptal etti.');
+                throw new Error('Metin girilmedi');
             }
 
             const b21Button = await waitForButtonClickable(obsIframeDoc, 'B_21');
