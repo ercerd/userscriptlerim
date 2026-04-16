@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name        TPS BelgeListesi Dropdown Ekleme
+// @name        TBS BelgeListesi Dropdown Ekleme
 // @namespace   violentmonkey
-// @version     1.3
+// @version     1.4
 // @description search-fld input alanının soluna dropdown ekleme
 // @match       https://uygulama.gtb.gov.tr/TekPencere/EBelge/BelgeListesi
 // @grant       none
