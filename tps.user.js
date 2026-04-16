@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name        TBS BelgeListesi Dropdown Ekleme
+// @name        TPS BelgeListesi Dropdown Ekleme
 // @namespace   violentmonkey
 // @version     1.4
 // @description search-fld input alanının soluna dropdown ekleme
