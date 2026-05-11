@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Fatura İşlemleri
 // @namespace    http://tampermonkey.net/ 
-// @version      4.2
+// @version      4.3
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
 // @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
@@ -46,7 +46,7 @@
                 align-items: flex-start;
                 padding: 8px;
                 gap: 8px;
-                z-index: 999;
+                z-index: 99;
             }
             .filter-row {
                 display: flex;
@@ -385,6 +385,7 @@
             
             // Tabloyu Bul
             let table = null;
+            let totalItems = 0;
             if (allLinks.length > 0) {
                 table = allLinks[0].closest('table');
             } else {
@@ -417,6 +418,7 @@
 
                 // TÜM SATIRLARI KONTROL ET (PDF olan/olmayanları gizlemek için)
                 const allTableRows = table.querySelectorAll('tbody tr, tr:not(:first-child)');
+                totalItems = allTableRows.length;
                 allTableRows.forEach(row => {
                     const hasPdf = row.querySelector(pdfLinkSelector);
                     let shouldHide = false;
@@ -492,10 +494,10 @@
 
             if (isFilterActive) {
                 const filterText = companyFilter ? `Filtre: <b>"${companyInput.value}"</b>` : "Tarih filtresi aktif";
-                downloadStatus.innerHTML = `${filterText}<br>Seçilen: ${pdfLinks.length} adet fatura`;
+                downloadStatus.innerHTML = `${filterText}<br>Toplam: ${totalItems} | Seçilen: ${pdfLinks.length}`;
                 downloadStatus.style.color = '#0f5132';
             } else {
-                downloadStatus.textContent = `İndirilebilir PDF sayısı: ${pdfLinks.length}`;
+                downloadStatus.innerHTML = `Toplam: ${totalItems}<br>İndirilebilir PDF: ${pdfLinks.length}`;
                 downloadStatus.style.color = '';
             }
 
