@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Konat Fatura İşlemleri
 // @namespace    http://tampermonkey.net/ 
-// @version      4.3
+// @version      4.4
 // @description  Konat fatura işlemleri (PDF indir, birleştir, filtrele) ve menü düzenlemelerini (kısayollar, genişletilmiş menü) tek çatı altında toplar.
 // @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
 // @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/konatfaturaislemleri.user.js
@@ -46,7 +46,11 @@
                 align-items: flex-start;
                 padding: 8px;
                 gap: 8px;
-                z-index: 99;
+                z-index: 10;
+            }
+            /* Modal açıkken barı en alta gönder */
+            body.modal-open .custom-top-bar {
+                z-index: 1 !important;
             }
             .filter-row {
                 display: flex;
