@@ -1,7 +1,7 @@
     // ==UserScript==
     // @name         Show Hidden Columns on GGB Son Bildirim
     // @namespace    http://tampermonkey.net/
-    // @version      2.1
+    // @version      2.2
     // @description  Show hidden Gümrük Başvuru No and Gümrük Başvuru Tarihi columns on ggbsonbildirim.tarimorman.gov.tr
     // @author       Grok
     // @match        https://ggbsonbildirim.tarimorman.gov.tr/*
@@ -29,12 +29,23 @@
                     border: 1px solid #e2e8f0 !important;
                     background: #ffffff !important;
                     padding: 8px !important;
-                    margin-top: 15px !important;
+                    clear: both !important;
+                }
+
+                @media only screen and (max-width: 768px) {
+                    .table-responsive, .dataTables_wrapper {
+                        margin-top: 180px !important; /* Logoların ve başlığın tablonun üstüne binmesini önler */
+                    }
+                }
+
+                @media only screen and (min-width: 769px) {
+                    .table-responsive, .dataTables_wrapper {
+                        margin-top: 15px !important;
+                    }
                 }
 
                 /* Gizli Sütunları Zorla Göster (Bizim gizlediklerimiz hariç) */
                 th:not(.hidden-onay), td:not(.hidden-onay) {
-                    /* Tarım bakanlığının gizlediği 7 ve 8. sütunlar için zorunlu gösterim */
                     display: table-cell;
                 }
                 
@@ -57,9 +68,6 @@
                     padding: 14px 10px !important;
                     border-bottom: 2px solid #e2e8f0 !important;
                     white-space: nowrap !important;
-                    position: sticky !important;
-                    top: 0;
-                    z-index: 20;
                 }
 
                 table.table tbody td {
@@ -83,30 +91,37 @@
                     background-color: #ffffff !important;
                     z-index: 15 !important;
                     border-right: 1px solid #e2e8f0 !important;
-                    width: 140px !important;
-                    min-width: 140px !important;
-                    max-width: 140px !important;
+                    width: 120px !important;
+                    min-width: 120px !important;
+                    max-width: 120px !important;
+                    white-space: nowrap !important;
                 }
                 table.table th.sticky-onbildirim {
                     background-color: #f8fafc !important;
-                    z-index: 25 !important;
+                    z-index: 16 !important;
                 }
 
                 /* Gümrük Başvuru No Sütununu Sabitle (Ön Bildirimin Yanında) */
                 table.table td.sticky-gumrukno, 
                 table.table th.sticky-gumrukno {
                     position: sticky !important;
-                    left: 140px !important;
+                    left: 120px !important;
                     background-color: #f0f9ff !important;
                     z-index: 15 !important;
                     border-right: 2px solid #e2e8f0 !important;
-                    width: 160px !important;
-                    min-width: 160px !important;
-                    max-width: 160px !important;
+                    width: 175px !important;
+                    min-width: 175px !important;
+                    max-width: 175px !important;
+                    white-space: nowrap !important;
+                }
+                table.table td.sticky-gumrukno {
+                    font-family: monospace !important;
+                    font-size: 11px !important;
+                    letter-spacing: -0.5px !important;
                 }
                 table.table th.sticky-gumrukno {
                     background-color: #e0f2fe !important;
-                    z-index: 25 !important;
+                    z-index: 16 !important;
                 }
 
                 /* Hover/Focus Durumunda Hücreyi Genişlet */
@@ -133,7 +148,7 @@
                 const parent = table.parentElement;
                 if (parent && !parent.classList.contains('table-responsive')) {
                     parent.style.overflowX = 'auto';
-                    parent.style.display = 'block';
+                    // display: block kaldırılarak bootstrap/sayfa yerleşimi korunuyor
                     parent.style.width = '100%';
                 }
                 
