@@ -1,10 +1,12 @@
 // ==UserScript==
-// @name         Show Hidden Columns on GGB Son Bildirim
+// @name         Show Hidden Columns and Auto Fill Captcha on GGB Son Bildirim
 // @namespace    http://tampermonkey.net/
-// @version      2.5
-// @description  Show hidden Gümrük Başvuru No and Gümrük Başvuru Tarihi columns on ggbsonbildirim.tarimorman.gov.tr
+// @version      3.0
+// @description  Show hidden columns, copy ID button and auto-fill captcha on GGBS Son Bildirim
 // @author       Grok
 // @match        https://ggbsonbildirim.tarimorman.gov.tr/*
+// @match        https://ggbsonbildirimtest.tarimorman.gov.tr/*
+// @match        https://172.20.50.104/*
 // @grant        none
 // @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/mobilggbsonbildirim.user.js
 // @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/mobilggbsonbildirim.user.js
@@ -13,7 +15,19 @@
 (function() {
     'use strict';
 
-    // Toast notification helper
+    // CAPTCHA otomatik doldurma fonksiyonu
+    function fillCaptcha() {
+        const hiddenInput = document.getElementById('generatedGuvenlikKodu');
+        if (hiddenInput) {
+            const captchaValue = hiddenInput.value;
+            const captchaInput = document.getElementById('guvenlikKodu');
+            if (captchaInput && captchaInput.value !== captchaValue) {
+                captchaInput.value = captchaValue;
+            }
+        }
+    }
+
+    // Toast bildirim yardımcısı
     const showToast = (message, type = 'success') => {
         let toastContainer = document.getElementById('ggb-toast-container');
         if (!toastContainer) {
@@ -47,7 +61,7 @@
         }, 2500);
     };
 
-    // Clipboard copy helper
+    // Pano kopyalama yardımcısı
     const copyToClipboard = (text) => {
         if (!text) {
             showToast('Kopyalanacak ID bulunamadı!', 'error');
@@ -139,6 +153,10 @@
     };
 
     const applyFixes = () => {
+        // Captcha otomatik doldurma tetikle
+        fillCaptcha();
+
+        // Tablo işlemleri
         document.querySelectorAll('table').forEach(table => {
             const parent = table.parentElement;
             if (parent && !parent.classList.contains('table-responsive')) {
@@ -205,9 +223,23 @@
     injectStyles();
     applyFixes();
 
-    const observer = new MutationObserver(() => {
-        applyFixes();
+    window.addEventListener('load', applyFixes);
+
+    const observer = new MutationObserver((mutations) => {
+        let shouldRun = false;
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                shouldRun = true;
+            }
+        });
+        if (shouldRun) {
+            applyFixes();
+        }
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { 
+        childList: true, 
+        subtree: true,
+        attributes: true 
+    });
 })();
