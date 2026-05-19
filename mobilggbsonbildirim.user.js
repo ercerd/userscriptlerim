@@ -1,7 +1,7 @@
 // ==UserScript==
     // @name         Show Hidden Columns on GGB Son Bildirim
     // @namespace    http://tampermonkey.net/
-    // @version      2.3
+    // @version      2.4
     // @description  Show hidden Gümrük Başvuru No and Gümrük Başvuru Tarihi columns on ggbsonbildirim.tarimorman.gov.tr
     // @author       Grok
     // @match        https://ggbsonbildirim.tarimorman.gov.tr/*
@@ -91,27 +91,34 @@
                     background-color: #ffffff !important;
                     z-index: 15 !important;
                     border-right: 1px solid #e2e8f0 !important;
-                    width: 125px !important;
-                    min-width: 125px !important;
-                    max-width: 125px !important;
-                    white-space: nowrap !important;
+                    width: 90px !important;
+                    min-width: 90px !important;
+                    max-width: 90px !important;
+                }
+                table.table td.sticky-onbildirim {
+                    font-family: monospace !important;
+                    font-size: 11px !important;
+                    letter-spacing: -0.5px !important;
+                    white-space: normal !important;
+                    word-break: break-all !important;
                 }
                 table.table th.sticky-onbildirim {
                     background-color: #f8fafc !important;
                     z-index: 16 !important;
+                    white-space: normal !important;
                 }
 
                 /* Gümrük Başvuru No Sütununu Sabitle (Ön Bildirimin Yanında) */
                 table.table td.sticky-gumrukno, 
                 table.table th.sticky-gumrukno {
                     position: sticky !important;
-                    left: 125px !important;
+                    left: 90px !important;
                     background-color: #f0f9ff !important;
                     z-index: 15 !important;
                     border-right: 2px solid #e2e8f0 !important;
-                    width: 125px !important;
-                    min-width: 125px !important;
-                    max-width: 125px !important;
+                    width: 90px !important;
+                    min-width: 90px !important;
+                    max-width: 90px !important;
                 }
                 table.table td.sticky-gumrukno {
                     font-family: monospace !important;
@@ -123,7 +130,7 @@
                 table.table th.sticky-gumrukno {
                     background-color: #e0f2fe !important;
                     z-index: 16 !important;
-                    white-space: nowrap !important;
+                    white-space: normal !important;
                 }
 
                 /* Hover/Focus Durumunda Hücreyi Genişlet */
