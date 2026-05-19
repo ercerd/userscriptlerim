@@ -1,7 +1,7 @@
-    // ==UserScript==
+// ==UserScript==
     // @name         Show Hidden Columns on GGB Son Bildirim
     // @namespace    http://tampermonkey.net/
-    // @version      2.2
+    // @version      2.3
     // @description  Show hidden Gümrük Başvuru No and Gümrük Başvuru Tarihi columns on ggbsonbildirim.tarimorman.gov.tr
     // @author       Grok
     // @match        https://ggbsonbildirim.tarimorman.gov.tr/*
@@ -91,9 +91,9 @@
                     background-color: #ffffff !important;
                     z-index: 15 !important;
                     border-right: 1px solid #e2e8f0 !important;
-                    width: 120px !important;
-                    min-width: 120px !important;
-                    max-width: 120px !important;
+                    width: 125px !important;
+                    min-width: 125px !important;
+                    max-width: 125px !important;
                     white-space: nowrap !important;
                 }
                 table.table th.sticky-onbildirim {
@@ -105,23 +105,25 @@
                 table.table td.sticky-gumrukno, 
                 table.table th.sticky-gumrukno {
                     position: sticky !important;
-                    left: 120px !important;
+                    left: 125px !important;
                     background-color: #f0f9ff !important;
                     z-index: 15 !important;
                     border-right: 2px solid #e2e8f0 !important;
-                    width: 175px !important;
-                    min-width: 175px !important;
-                    max-width: 175px !important;
-                    white-space: nowrap !important;
+                    width: 125px !important;
+                    min-width: 125px !important;
+                    max-width: 125px !important;
                 }
                 table.table td.sticky-gumrukno {
                     font-family: monospace !important;
                     font-size: 11px !important;
                     letter-spacing: -0.5px !important;
+                    white-space: normal !important;
+                    word-break: break-all !important;
                 }
                 table.table th.sticky-gumrukno {
                     background-color: #e0f2fe !important;
                     z-index: 16 !important;
+                    white-space: nowrap !important;
                 }
 
                 /* Hover/Focus Durumunda Hücreyi Genişlet */
@@ -148,7 +150,6 @@
                 const parent = table.parentElement;
                 if (parent && !parent.classList.contains('table-responsive')) {
                     parent.style.overflowX = 'auto';
-                    // display: block kaldırılarak bootstrap/sayfa yerleşimi korunuyor
                     parent.style.width = '100%';
                 }
                 
@@ -178,9 +179,15 @@
                     if (text.includes('onay') || text.includes('durum') || text.includes('seç') || text === '') {
                         if (onayIdx === -1) onayIdx = idx;
                     } else if (text.includes('ön bildirim') || text.includes('on bıldırım') || text.includes('onbildirim')) {
-                        if (onbildirimIdx === -1) onbildirimIdx = idx;
+                        if (onbildirimIdx === -1) {
+                            onbildirimIdx = idx;
+                            th.textContent = 'Bildirim No';
+                        }
                     } else if (text.includes('gümrük başvuru no') || text.includes('gumruk basvuru no') || text.includes('gümrük başvuru numara')) {
-                        if (gumrukNoIdx === -1) gumrukNoIdx = idx;
+                        if (gumrukNoIdx === -1) {
+                            gumrukNoIdx = idx;
+                            th.textContent = 'ID No';
+                        }
                     }
                 });
 
