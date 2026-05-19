@@ -1,7 +1,7 @@
     // ==UserScript==
     // @name         Show Hidden Columns on GGB Son Bildirim
     // @namespace    http://tampermonkey.net/
-    // @version      2.0
+    // @version      2.1
     // @description  Show hidden Gümrük Başvuru No and Gümrük Başvuru Tarihi columns on ggbsonbildirim.tarimorman.gov.tr
     // @author       Grok
     // @match        https://ggbsonbildirim.tarimorman.gov.tr/*
@@ -32,10 +32,15 @@
                     margin-top: 15px !important;
                 }
 
-                /* Gizli Sütunları Zorla Göster */
+                /* Gizli Sütunları Zorla Göster (Bizim gizlediklerimiz hariç) */
+                th:not(.hidden-onay), td:not(.hidden-onay) {
+                    /* Tarım bakanlığının gizlediği 7 ve 8. sütunlar için zorunlu gösterim */
+                    display: table-cell;
+                }
+                
                 th:nth-child(7), th:nth-child(8),
                 td:nth-child(7), td:nth-child(8),
-                [style*="display: none"] {
+                [style*="display: none"]:not(.hidden-onay) {
                     display: table-cell !important;
                     visibility: visible !important;
                     opacity: 1 !important;
@@ -70,10 +75,38 @@
                     transition: all 0.2s ease;
                 }
 
-                /* Yeni Eklenen Sütunlara Hafif Vurgu */
-                td:nth-child(7), td:nth-child(8) {
-                    background-color: #f0f9ff66 !important;
-                    font-weight: 500;
+                /* Ön Bildirim Numarası Sütununu Sabitle (Sol) */
+                table.table td.sticky-onbildirim, 
+                table.table th.sticky-onbildirim {
+                    position: sticky !important;
+                    left: 0 !important;
+                    background-color: #ffffff !important;
+                    z-index: 15 !important;
+                    border-right: 1px solid #e2e8f0 !important;
+                    width: 140px !important;
+                    min-width: 140px !important;
+                    max-width: 140px !important;
+                }
+                table.table th.sticky-onbildirim {
+                    background-color: #f8fafc !important;
+                    z-index: 25 !important;
+                }
+
+                /* Gümrük Başvuru No Sütununu Sabitle (Ön Bildirimin Yanında) */
+                table.table td.sticky-gumrukno, 
+                table.table th.sticky-gumrukno {
+                    position: sticky !important;
+                    left: 140px !important;
+                    background-color: #f0f9ff !important;
+                    z-index: 15 !important;
+                    border-right: 2px solid #e2e8f0 !important;
+                    width: 160px !important;
+                    min-width: 160px !important;
+                    max-width: 160px !important;
+                }
+                table.table th.sticky-gumrukno {
+                    background-color: #e0f2fe !important;
+                    z-index: 25 !important;
                 }
 
                 /* Hover/Focus Durumunda Hücreyi Genişlet */
@@ -85,17 +118,6 @@
                     z-index: 10;
                     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
                 }
-
-                /* İlk Sütunu Sabitle (Navigasyon Kolaylığı) */
-                table.table td:first-child, 
-                table.table th:first-child {
-                    position: sticky !important;
-                    left: 0;
-                    background: #fff !important;
-                    z-index: 15;
-                    border-right: 2px solid #f1f5f9 !important;
-                }
-                table.table th:first-child { z-index: 25; background: #f8fafc !important; }
 
                 /* Premium Scrollbar */
                 .table-responsive::-webkit-scrollbar { height: 6px; }
@@ -116,7 +138,72 @@
                 }
                 
                 table.querySelectorAll('[style*="display: none"]').forEach(el => {
-                    el.style.setProperty('display', 'table-cell', 'important');
+                    if (!el.classList.contains('hidden-onay')) {
+                        el.style.setProperty('display', 'table-cell', 'important');
+                    }
+                });
+
+                // Tablo sütun yerleşimlerini dinamik olarak düzenleyelim
+                const rows = table.querySelectorAll('tr');
+                if (rows.length === 0) return;
+
+                const headerRow = table.querySelector('thead tr') || rows[0];
+                if (!headerRow) return;
+
+                // Eğer zaten düzenleme yapılmışsa tekrar yapma
+                if (headerRow.querySelector('[data-orig-idx]')) return;
+
+                const headers = Array.from(headerRow.children);
+                let onayIdx = -1;
+                let onbildirimIdx = -1;
+                let gumrukNoIdx = -1;
+
+                headers.forEach((th, idx) => {
+                    const text = th.textContent.toLowerCase().trim();
+                    if (text.includes('onay') || text.includes('durum') || text.includes('seç') || text === '') {
+                        if (onayIdx === -1) onayIdx = idx;
+                    } else if (text.includes('ön bildirim') || text.includes('on bıldırım') || text.includes('onbildirim')) {
+                        if (onbildirimIdx === -1) onbildirimIdx = idx;
+                    } else if (text.includes('gümrük başvuru no') || text.includes('gumruk basvuru no') || text.includes('gümrük başvuru numara')) {
+                        if (gumrukNoIdx === -1) gumrukNoIdx = idx;
+                    }
+                });
+
+                // Bulunamazsa tahmin et
+                if (onayIdx === -1) onayIdx = 0;
+                if (onbildirimIdx === -1) onbildirimIdx = headers.length > 4 ? 4 : -1;
+                if (gumrukNoIdx === -1) gumrukNoIdx = headers.length > 6 ? 6 : -1;
+
+                if (onbildirimIdx === -1 || gumrukNoIdx === -1) return;
+
+                rows.forEach(row => {
+                    const cells = Array.from(row.children);
+                    if (cells.length < Math.max(onayIdx, onbildirimIdx, gumrukNoIdx) + 1) return;
+
+                    const onayCell = cells[onayIdx];
+                    const onbildirimCell = cells[onbildirimIdx];
+                    const gumrukNoCell = cells[gumrukNoIdx];
+
+                    if (onayCell) {
+                        onayCell.style.setProperty('display', 'none', 'important');
+                        onayCell.classList.add('hidden-onay');
+                    }
+
+                    if (onbildirimCell) {
+                        onbildirimCell.setAttribute('data-orig-idx', onbildirimIdx);
+                        onbildirimCell.classList.add('sticky-onbildirim');
+                        row.insertBefore(onbildirimCell, row.firstChild);
+                    }
+
+                    if (gumrukNoCell) {
+                        gumrukNoCell.setAttribute('data-orig-idx', gumrukNoIdx);
+                        gumrukNoCell.classList.add('sticky-gumrukno');
+                        if (onbildirimCell) {
+                            row.insertBefore(gumrukNoCell, onbildirimCell.nextSibling);
+                        } else {
+                            row.insertBefore(gumrukNoCell, row.firstChild);
+                        }
+                    }
                 });
             });
         };
