@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.198
+// @version      2.210
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -79,6 +79,68 @@
         }, 3000);
     }
 
+    // Helper function to check if Sertifika exists
+    function checkSertifikaExists() {
+        const sertifikaDosyaElement = document.querySelector('td#SERTIFIKADOSYA');
+        if (!sertifikaDosyaElement) return false;
+        return !sertifikaDosyaElement.textContent.trim().includes('Yüklü Sertifika Yok');
+    }
+
+    // Helper function to check if İçerik exists
+    function checkIcerikExists() {
+        const icerikDosyaElement = document.querySelector('td#ICERIKBELGESIDOSYA');
+        if (!icerikDosyaElement) return false;
+        return !icerikDosyaElement.textContent.trim().includes('Yüklü Içerik Yok');
+    }
+
+    // Helper function to check if Etiket exists
+    function checkEtiketExists() {
+        const etiketDosyaElement = document.querySelector('td#ETIKETDOSYA');
+        if (!etiketDosyaElement) return false;
+        return !etiketDosyaElement.textContent.trim().includes('Yüklü Etiket Yok');
+    }
+
+    // Function to create a status indicator badge
+    function createIndicator(exists) {
+        const wrapper = document.createElement('span');
+        wrapper.style.display = 'inline-flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.gap = '6px';
+        wrapper.style.padding = '4px 10px';
+        wrapper.style.borderRadius = '20px';
+        wrapper.style.fontSize = '12px';
+        wrapper.style.fontWeight = '600';
+        wrapper.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+        wrapper.style.minWidth = '55px';
+        wrapper.style.justifyContent = 'center';
+
+        const dot = document.createElement('span');
+        dot.style.width = '8px';
+        dot.style.height = '8px';
+        dot.style.borderRadius = '50%';
+        dot.style.display = 'inline-block';
+
+        const label = document.createElement('span');
+
+        if (exists) {
+            wrapper.style.backgroundColor = 'rgba(40, 167, 69, 0.12)';
+            wrapper.style.color = '#2e7d32';
+            wrapper.style.border = '1px solid rgba(40, 167, 69, 0.25)';
+            dot.style.backgroundColor = '#2e7d32';
+            label.innerText = 'Var';
+        } else {
+            wrapper.style.backgroundColor = 'rgba(220, 53, 69, 0.08)';
+            wrapper.style.color = '#c62828';
+            wrapper.style.border = '1px solid rgba(220, 53, 69, 0.2)';
+            dot.style.backgroundColor = '#c62828';
+            label.innerText = 'Yok';
+        }
+
+        wrapper.appendChild(dot);
+        wrapper.appendChild(label);
+        return wrapper;
+    }
+
     // ==================== FORM FUNCTIONS ====================
 
     // Function to reset form fields
@@ -143,21 +205,22 @@
 
         if (explanationArea && !explanationArea.disabled) {
             console.log("ACIKLAMAILGUMRUK area found and enabled:", explanationArea);
+            const personelKisaltmasi = localStorage.getItem('ggbs_personel_kisaltmasi') || 'EE';
 
             if (explanationArea.value.includes("GTİP değiştirildi")) {
                 console.log("Text 'GTIP değiştirildi' found in ACIKLAMAILGUMRUK area.");
                 const lines = explanationArea.value.split('\n');
                 if (lines.length > 1) {
-                    lines[1] = 'EE'; // Update the second line
+                    lines[1] = personelKisaltmasi; // Update the second line
                 } else {
-                    lines.push('EE'); // Add "EE" if there is only one line
+                    lines.push(personelKisaltmasi); // Add if there is only one line
                 }
                 explanationArea.value = lines.join('\n');
-                console.log("ACIKLAMAILGUMRUK field updated with 'EE' on the second line.");
+                console.log("ACIKLAMAILGUMRUK field updated with '" + personelKisaltmasi + "' on the second line.");
             } else {
                 console.log("Text 'GTIP değiştirildi' not found in ACIKLAMAILGUMRUK area.");
-                explanationArea.value = 'EE';
-                console.log("ACIKLAMAILGUMRUK field set to 'EE'.");
+                explanationArea.value = personelKisaltmasi;
+                console.log("ACIKLAMAILGUMRUK field set to '" + personelKisaltmasi + "'.");
             }
 
             explanationArea.dispatchEvent(new Event('change', { bubbles: true }));
@@ -504,38 +567,57 @@
 
         // Create Sertifika, İçerik, Etiket İndir buttons (only on non-Sorgulama pages)
         if (!isSorgulamaPage) {
+            const sertifikaExists = checkSertifikaExists();
+            const icerikExists = checkIcerikExists();
+            const etiketExists = checkEtiketExists();
+
+            const createButtonRow = (btn, exists) => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.gap = '8px';
+                row.style.width = '100%';
+                
+                btn.style.flex = '1';
+                btn.style.minWidth = '120px';
+                
+                row.appendChild(btn);
+                row.appendChild(createIndicator(exists));
+                return row;
+            };
+
             const sertifikaButton = document.createElement('button');
             sertifikaButton.innerText = 'Sertifika İndir';
             sertifikaButton.style.padding = '10px 20px';
-            sertifikaButton.style.backgroundColor = '#f44336';
+            sertifikaButton.style.backgroundColor = sertifikaExists ? '#f44336' : '#9e9e9e';
             sertifikaButton.style.color = 'white';
             sertifikaButton.style.border = 'none';
             sertifikaButton.style.borderRadius = '5px';
-            sertifikaButton.style.cursor = 'pointer';
-            buttonContainer.appendChild(sertifikaButton);
+            sertifikaButton.style.cursor = sertifikaExists ? 'pointer' : 'not-allowed';
             sertifikaButton.addEventListener('click', handleSertifikaClick);
+            buttonContainer.appendChild(createButtonRow(sertifikaButton, sertifikaExists));
 
             const icerikButton = document.createElement('button');
             icerikButton.innerText = 'İçerik İndir';
             icerikButton.style.padding = '10px 20px';
-            icerikButton.style.backgroundColor = 'green';
+            icerikButton.style.backgroundColor = icerikExists ? 'green' : '#9e9e9e';
             icerikButton.style.color = 'white';
             icerikButton.style.border = 'none';
             icerikButton.style.borderRadius = '5px';
-            icerikButton.style.cursor = 'pointer';
-            buttonContainer.appendChild(icerikButton);
+            icerikButton.style.cursor = icerikExists ? 'pointer' : 'not-allowed';
             icerikButton.addEventListener('click', handleIcerikClick);
+            buttonContainer.appendChild(createButtonRow(icerikButton, icerikExists));
 
             const etiketButton = document.createElement('button');
             etiketButton.innerText = 'Etiket İndir';
             etiketButton.style.padding = '10px 20px';
-            etiketButton.style.backgroundColor = '#9c27b0';
+            etiketButton.style.backgroundColor = etiketExists ? '#9c27b0' : '#9e9e9e';
             etiketButton.style.color = 'white';
             etiketButton.style.border = 'none';
             etiketButton.style.borderRadius = '5px';
-            etiketButton.style.cursor = 'pointer';
-            buttonContainer.appendChild(etiketButton);
+            etiketButton.style.cursor = etiketExists ? 'pointer' : 'not-allowed';
             etiketButton.addEventListener('click', handleEtiketClick);
+            buttonContainer.appendChild(createButtonRow(etiketButton, etiketExists));
         }
 
         // Create Formu Sıfırla button (only on Ön Bildirim Sorgulama page)
@@ -598,6 +680,47 @@
                 console.warn("Hedef tablo bulunamadı. ID kopyala butonları oluşturulamıyor.");
             }
         }
+
+        // Create Staff Abbreviation setting input (shown on all pages)
+        const settingsContainer = document.createElement('div');
+        settingsContainer.style.marginTop = '15px';
+        settingsContainer.style.padding = '8px 10px';
+        settingsContainer.style.border = '1px solid #ddd';
+        settingsContainer.style.borderRadius = '6px';
+        settingsContainer.style.backgroundColor = '#fdfdfd';
+        settingsContainer.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+        settingsContainer.style.display = 'flex';
+        settingsContainer.style.flexDirection = 'column';
+        settingsContainer.style.gap = '4px';
+        
+        const settingsLabel = document.createElement('label');
+        settingsLabel.innerText = 'Personel Kısaltması';
+        settingsLabel.style.fontSize = '11px';
+        settingsLabel.style.fontWeight = 'bold';
+        settingsLabel.style.color = '#555';
+        settingsLabel.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+        
+        const settingsInput = document.createElement('input');
+        settingsInput.type = 'text';
+        settingsInput.value = localStorage.getItem('ggbs_personel_kisaltmasi') || 'EE';
+        settingsInput.style.padding = '5px 8px';
+        settingsInput.style.border = '1px solid #ccc';
+        settingsInput.style.borderRadius = '4px';
+        settingsInput.style.fontSize = '12px';
+        settingsInput.style.fontWeight = 'bold';
+        settingsInput.style.color = '#333';
+        settingsInput.style.width = '100%';
+        settingsInput.style.boxSizing = 'border-box';
+        settingsInput.style.textAlign = 'center';
+        
+        settingsInput.addEventListener('input', () => {
+            localStorage.setItem('ggbs_personel_kisaltmasi', settingsInput.value.trim());
+            updateFields(); // Automatically update fields in real-time
+        });
+        
+        settingsContainer.appendChild(settingsLabel);
+        settingsContainer.appendChild(settingsInput);
+        buttonContainer.appendChild(settingsContainer);
     }
 
     // ==================== INITIALIZATION FUNCTIONS ====================
