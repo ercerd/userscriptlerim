@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.210
+// @version      2.230
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @grant        none
@@ -465,6 +465,7 @@
                     rowContainer.style.marginBottom = '2px';
 
                     const numButton = document.createElement('button');
+                    numButton.className = 'num-copy-btn';
                     numButton.innerText = rowNum;
                     numButton.style.padding = '3px 8px';
                     numButton.style.backgroundColor = '#6c757d';
@@ -487,6 +488,10 @@
 
                     numButton.addEventListener('click', function () {
                         copyRowData(index);
+                        numButton.classList.add('copied');
+                        setTimeout(() => {
+                            numButton.classList.remove('copied');
+                        }, 1000);
                     });
                 }
             }
@@ -501,12 +506,46 @@
 
     // Function to create and position buttons
     function createButtons() {
+        // Inject custom CSS styling for button focus, hover, active transitions and copy feedback
+        const style = document.createElement('style');
+        style.id = 'ggbs-panel-styles';
+        style.innerHTML = `
+            #ggbs-floating-panel button, 
+            #ggbs-floating-panel input {
+                transition: all 0.15s ease-in-out !important;
+            }
+            #ggbs-floating-panel button:focus-visible, 
+            #ggbs-floating-panel input:focus {
+                outline: none !important;
+                box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4) !important; /* Green focus outline */
+                border-color: #28a745 !important;
+            }
+            #ggbs-floating-panel button:hover {
+                filter: brightness(0.9) !important;
+                transform: translateY(-1px) !important;
+            }
+            #ggbs-floating-panel button:active {
+                filter: brightness(0.8) !important;
+                transform: translateY(0) scale(0.97) !important;
+            }
+            /* Row copy buttons active flash */
+            #ggbs-floating-panel .num-copy-btn {
+                transition: background-color 0.1s ease !important;
+            }
+            #ggbs-floating-panel .num-copy-btn.copied {
+                background-color: #28a745 !important;
+                color: white !important;
+            }
+        `;
+        document.head.appendChild(style);
+
         // Try multiple anchor tables for different page layouts
         const anchorElement = document.querySelector('table[width="1236"]')
             || document.querySelector('table[width="1051"]')
             || document.querySelector('table[width="1221"]');
         const isSorgulamaPage = isOnBildirimSorgulamaPage();
         const buttonContainer = document.createElement('div');
+        buttonContainer.id = 'ggbs-floating-panel';
         buttonContainer.style.zIndex = 1000;
         buttonContainer.style.display = 'flex';
         buttonContainer.style.flexDirection = 'column';
@@ -589,7 +628,7 @@
             const sertifikaButton = document.createElement('button');
             sertifikaButton.innerText = 'Sertifika İndir';
             sertifikaButton.style.padding = '10px 20px';
-            sertifikaButton.style.backgroundColor = sertifikaExists ? '#f44336' : '#9e9e9e';
+            sertifikaButton.style.backgroundColor = sertifikaExists ? '#1e88e5' : '#9e9e9e';
             sertifikaButton.style.color = 'white';
             sertifikaButton.style.border = 'none';
             sertifikaButton.style.borderRadius = '5px';
