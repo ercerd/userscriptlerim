@@ -14,6 +14,8 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 // @grant        none
 // @run-at       document-end
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/timosanalizsikliklarimoderntablo.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/timosanalizsikliklarimoderntablo.user.js
 // ==/UserScript==
 
 (function () {
