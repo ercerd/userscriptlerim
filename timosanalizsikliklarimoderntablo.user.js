@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TIMOS - Analiz Sıklık Modern Tablo + Toplu Silme
 // @namespace    http://tampermonkey.net/
-// @version      2.4
+// @version      2.5
 // @description  Analiz Sıklık, Analiz Tanımlama, Ürün Tanımlama, Antrepo ve Ürün Sınıfı Tanımlama sayfaları için modern tablo, filtreleme, sayfalandırma, toplu silme, Excel Export ve gelişmiş filtreleme
 // @author       You
 // @match        https://timos.tasar.com.tr/*
@@ -10,6 +10,7 @@
 // @match        https://timos.tasar.com.tr/main2/urunTanimlama*
 // @match        https://timos.tasar.com.tr/main2/antrepo*
 // @match        https://timos.tasar.com.tr/main2/urunSinifiTanimlama*
+// @match        https://timos.tasar.com.tr/main2/gorevatama*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 // @grant        none
 // @run-at       document-end
@@ -2707,14 +2708,23 @@
         const isUrunTanimlamaPage = currentUrl.includes('timos.tasar.com.tr/main2/urunTanimlama');
         const isAntrepoPage = currentUrl.includes('timos.tasar.com.tr/main2/antrepo');
         const isUrunSinifiPage = currentUrl.includes('timos.tasar.com.tr/main2/urunSinifiTanimlama');
+        const isGorevatamaPage = currentUrl.includes('timos.tasar.com.tr/main2/gorevatama');
         const isTimosPage = currentUrl.includes('timos.tasar.com.tr');
 
-        if (isSiklikPage || isTanimlamaPage || isUrunTanimlamaPage || isAntrepoPage || isUrunSinifiPage) {
+        if (isGorevatamaPage) {
+            removeTableTriggerButton();
+            addTokenButton();
+            addGorevTriggerButton();
+            const mainContainer = document.getElementById('customSiklikTableContainer');
+            if (mainContainer) mainContainer.remove();
+        } else if (isSiklikPage || isTanimlamaPage || isUrunTanimlamaPage || isAntrepoPage || isUrunSinifiPage) {
             addTableTriggerButton();
             addTokenButton();
+            removeGorevTriggerButton();
         } else if (isTimosPage) {
             removeTableTriggerButton();
             addTokenButton();
+            removeGorevTriggerButton();
             const tableContainer = document.getElementById('customSiklikTableContainer');
             if (tableContainer) {
                 tableContainer.remove();
@@ -2722,12 +2732,324 @@
         } else {
             removeTableTriggerButton();
             removeTokenButton();
+            removeGorevTriggerButton();
             const tableContainer = document.getElementById('customSiklikTableContainer');
             if (tableContainer) {
                 tableContainer.remove();
             }
         }
     }
+
+    // ================================================================
+    // === GÖREV ATAMA (gorevatama) BAĞIMSIZ MODÜLÜ ===
+    // === Kendi veri yönetimi, render, filtre, sıralama, sayfalama ===
+    // ================================================================
+    let gorev_Data = [];
+    let gorev_FilteredData = [];
+    let gorev_SortColumn = null;
+    let gorev_SortDirection = 'asc';
+    let gorev_CurrentPage = 1;
+
+    async function fetchBelgeNoData(token) {
+        const response = await fetch('https://timosapi.tasar.com.tr/api/gumrukcu/GetBelgeNoNotInGorevler', {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Authorization': token,
+            },
+            method: 'GET',
+            mode: 'cors'
+        });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        const rawData = Array.isArray(data) ? data : (data.data || data.result || []);
+        gorev_Data = rawData.map(item => {
+            const belgeNo = item.belgeNo || item.belgeNumarasi || item.belge_No || '-';
+            return {
+                belgeNo: belgeNo,
+                firmaAdi: item.firmaAdi || item.firma || '-',
+                eklenmeTarihi: item.eklenmeTarihi || item.eklenmeTarih || item.insertTime || item.tarih || '',
+                durum: item.durum || (item.isActive === true ? 'Aktif' : item.isActive === false ? 'Pasif' : 'Aktif'),
+                _uniqueId: belgeNo
+            };
+        });
+        gorev_FilteredData = [...gorev_Data];
+    }
+
+    let gorevTriggerBtn = null;
+
+    function addGorevTriggerButton() {
+        if (gorevTriggerBtn && document.body.contains(gorevTriggerBtn)) return;
+        gorevTriggerBtn = document.createElement('button');
+        gorevTriggerBtn.className = 'trigger-btn';
+        gorevTriggerBtn.id = 'gorevTriggerBtn';
+        gorevTriggerBtn.textContent = '📋 Görevsiz Belgeler';
+        gorevTriggerBtn.style.bottom = '150px';
+        gorevTriggerBtn.onclick = createGorevTable;
+        document.body.appendChild(gorevTriggerBtn);
+    }
+
+    function removeGorevTriggerButton() {
+        if (gorevTriggerBtn && document.body.contains(gorevTriggerBtn)) {
+            gorevTriggerBtn.remove();
+            gorevTriggerBtn = null;
+        }
+        const gorevContainer = document.getElementById('gorevTableContainer');
+        if (gorevContainer) gorevContainer.remove();
+    }
+
+    window.closeGorevTable = function () {
+        const container = document.getElementById('gorevTableContainer');
+        if (container) container.style.display = 'none';
+    };
+
+    function createGorevTable() {
+        const existing = document.getElementById('gorevTableContainer');
+        if (existing) {
+            existing.style.display = 'block';
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.id = 'gorevTableContainer';
+        container.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.98); z-index: 1000000; overflow-y: scroll; padding: 20px; box-sizing: border-box;';
+        container.innerHTML = `
+            <div style="max-width: 1400px; margin: 0 auto;">
+                <div class="table-header">
+                    <div class="header-title">
+                        Görevlerde Olmayan Belge Numaraları
+                        <span id="gorevRecordCount" class="stats-badge">0 kayıt</span>
+                    </div>
+                    <button class="close-btn" onclick="window.closeGorevTable()">✖</button>
+                </div>
+
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <div class="filter-group-header">
+                            <label class="filter-label">Belge No</label>
+                            <select class="filter-mode-select" id="gorevFilterBelgeNoMode" onchange="window.applyGorevFilters()">
+                                <option value="contains" selected>İçerir</option>
+                                <option value="starts">İle Başlar</option>
+                                <option value="equals">Eşittir</option>
+                            </select>
+                        </div>
+                        <input type="text" id="gorevFilterBelgeNo" class="filter-input" placeholder="Belge no ara..." oninput="window.applyGorevFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <div class="filter-group-header">
+                            <label class="filter-label">Firma Adı</label>
+                            <select class="filter-mode-select" id="gorevFilterFirmaMode" onchange="window.applyGorevFilters()">
+                                <option value="contains" selected>İçerir</option>
+                                <option value="starts">İle Başlar</option>
+                                <option value="equals">Eşittir</option>
+                            </select>
+                        </div>
+                        <input type="text" id="gorevFilterFirma" class="filter-input" placeholder="Firma ara..." oninput="window.applyGorevFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Durum</label>
+                        <select id="gorevFilterDurum" class="filter-select" onchange="window.applyGorevFilters()">
+                            <option value="">Tümü</option>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Pasif">Pasif</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-secondary" onclick="window.clearGorevFilters()">🗑️ Temizle</button>
+                    </div>
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stats-left">
+                        <span id="gorevTotalRecords">Toplam: 0</span>
+                        <span id="gorevShowingRecords">Gösterilen: 0</span>
+                    </div>
+                    <div class="stats-right">
+                        <select class="filter-select" id="gorevRowsPerPage" onchange="gorev_CurrentPage=1; window.renderGorevTable();">
+                            <option value="10">10 satır</option>
+                            <option value="25" selected>25 satır</option>
+                            <option value="50">50 satır</option>
+                            <option value="100">100 satır</option>
+                        </select>
+                        <button class="btn btn-excel" onclick="window.exportGorevToExcel()" style="padding: 10px 20px; border-radius: 50px;">Excel'e Aktar 📊</button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="belgeNo" onclick="window.sortGorevData('belgeNo')">Belge No</th>
+                                <th class="sortable" data-column="firmaAdi" onclick="window.sortGorevData('firmaAdi')">Firma Adı</th>
+                                <th class="sortable" data-column="eklenmeTarihi" onclick="window.sortGorevData('eklenmeTarihi')">Eklenme Tarihi</th>
+                                <th class="sortable" data-column="durum" onclick="window.sortGorevData('durum')">Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gorevTableBody">
+                            <tr><td colspan="4" class="loading">📡 Veriler yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination" id="gorevPagination"></div>
+            </div>
+        `;
+        document.body.appendChild(container);
+
+        const token = getAuthToken();
+        if (!token) {
+            document.getElementById('gorevTableBody').innerHTML =
+                '<tr><td colspan="4" class="error">❌ Token bulunamadı! Lütfen giriş yapın.</td></tr>';
+            return;
+        }
+        fetchBelgeNoData(token)
+            .then(() => window.renderGorevTable())
+            .catch(err => {
+                document.getElementById('gorevTableBody').innerHTML =
+                    `<tr><td colspan="4" class="error">❌ Hata: ${err.message}</td></tr>`;
+            });
+    }
+
+    window.renderGorevTable = function () {
+        const tbody = document.getElementById('gorevTableBody');
+        if (!tbody) return;
+
+        const rowsPerPage = parseInt(document.getElementById('gorevRowsPerPage')?.value || 25);
+        const start = (gorev_CurrentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageData = gorev_FilteredData.slice(start, end);
+
+        tbody.innerHTML = pageData.map(item => `
+                <tr>
+                    <td><span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">${item.belgeNo}</span></td>
+                    <td style="font-weight: 500;">${item.firmaAdi}</td>
+                    <td>${item.eklenmeTarihi || '-'}</td>
+                    <td><span style="background: ${item.durum === 'Aktif' ? '#28a745' : '#dc3545'}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">${item.durum || 'Aktif'}</span></td>
+                </tr>
+            `).join('') ||
+            '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #666;">📭 Veri bulunamadı</td></tr>';
+
+        document.getElementById('gorevRecordCount').textContent = `${gorev_FilteredData.length} kayıt`;
+        document.getElementById('gorevTotalRecords').textContent = `Toplam: ${gorev_FilteredData.length}`;
+        document.getElementById('gorevShowingRecords').textContent =
+            `Gösterilen: ${start + 1}-${Math.min(end, gorev_FilteredData.length)}`;
+
+        document.querySelectorAll('#gorevTableContainer .custom-table th.sortable').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.dataset.column === gorev_SortColumn) {
+                th.classList.add(gorev_SortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
+
+        renderGorevPagination();
+    };
+
+    function renderGorevPagination() {
+        const pagination = document.getElementById('gorevPagination');
+        if (!pagination) return;
+        const rowsPerPage = parseInt(document.getElementById('gorevRowsPerPage')?.value || 25);
+        const totalPages = Math.ceil(gorev_FilteredData.length / rowsPerPage);
+        let pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= gorev_CurrentPage - 2 && i <= gorev_CurrentPage + 2)) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== '...') {
+                pages.push('...');
+            }
+        }
+        pagination.innerHTML = `
+                <button class="page-btn" ${gorev_CurrentPage === 1 ? 'disabled' : ''} onclick="window.goToGorevPage(${gorev_CurrentPage - 1})">← Önceki</button>
+                ${pages.map(p => p === '...' ? '<span class="page-info">...</span>' : `<button class="page-btn ${p === gorev_CurrentPage ? 'active' : ''}" onclick="window.goToGorevPage(${p})">${p}</button>`).join('')}
+                <button class="page-btn" ${gorev_CurrentPage === totalPages ? 'disabled' : ''} onclick="window.goToGorevPage(${gorev_CurrentPage + 1})">Sonraki →</button>
+            `;
+    }
+
+    window.goToGorevPage = function (page) {
+        gorev_CurrentPage = page;
+        window.renderGorevTable();
+    };
+
+    window.sortGorevData = function (column) {
+        if (gorev_SortColumn === column) {
+            gorev_SortDirection = gorev_SortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            gorev_SortColumn = column;
+            gorev_SortDirection = 'asc';
+        }
+        gorev_FilteredData.sort((a, b) => {
+            let aVal = a[column],
+                bVal = b[column];
+            if (aVal == null) aVal = '';
+            if (bVal == null) bVal = '';
+            if (typeof aVal === 'string') { aVal = aVal.toLowerCase(); bVal = bVal.toLowerCase(); }
+            return gorev_SortDirection === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+        });
+        window.renderGorevTable();
+    };
+
+    window.applyGorevFilters = function () {
+        const belgeNo = (document.getElementById('gorevFilterBelgeNo')?.value || '').toLowerCase();
+        const belgeNoMode = document.getElementById('gorevFilterBelgeNoMode')?.value || 'contains';
+        const firma = (document.getElementById('gorevFilterFirma')?.value || '').toLowerCase();
+        const firmaMode = document.getElementById('gorevFilterFirmaMode')?.value || 'contains';
+        const durum = document.getElementById('gorevFilterDurum')?.value || '';
+
+        const matches = (val, filter, mode) => {
+            if (!filter) return true;
+            if (!val) return false;
+            const target = val.toLowerCase();
+            switch (mode) {
+                case 'starts': return target.startsWith(filter);
+                case 'equals': return target === filter;
+                default: return target.includes(filter);
+            }
+        };
+
+        gorev_FilteredData = gorev_Data.filter(item => {
+            if (!matches(item.belgeNo, belgeNo, belgeNoMode)) return false;
+            if (!matches(item.firmaAdi, firma, firmaMode)) return false;
+            if (durum && item.durum !== durum) return false;
+            return true;
+        });
+
+        gorev_CurrentPage = 1;
+        window.renderGorevTable();
+    };
+
+    window.clearGorevFilters = function () {
+        ['gorevFilterBelgeNo', 'gorevFilterFirma'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const durum = document.getElementById('gorevFilterDurum');
+        if (durum) durum.value = '';
+        window.applyGorevFilters();
+    };
+
+    window.exportGorevToExcel = function () {
+        if (typeof XLSX === 'undefined') {
+            alert('Excel kütüphanesi yüklenemedi.');
+            return;
+        }
+        if (gorev_FilteredData.length === 0) {
+            alert('Dışarı aktarılacak veri yok.');
+            return;
+        }
+        const exportData = gorev_FilteredData.map(item => ({
+            'Belge No': item.belgeNo,
+            'Firma Adı': item.firmaAdi,
+            'Eklenme Tarihi': item.eklenmeTarihi || '-',
+            'Durum': item.durum || 'Aktif'
+        }));
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Belgeler');
+        const wscols = Object.keys(exportData[0]).map(key => ({
+            wch: Math.max(key.length, ...exportData.map(item => (item[key] ? item[key].toString().length : 0))) + 2
+        }));
+        ws['!cols'] = wscols;
+        XLSX.writeFile(wb, 'gorevsiz_belge_numaralari.xlsx');
+    };
 
     // URL değişikliklerini izle
     let lastUrl = location.href;
