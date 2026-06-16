@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.230
+// @version      2.231
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
+// @run-at       document-end
 // @grant        none
 // @match        http://*/ONBILDIRIM/*
 // @match        https://*/ONBILDIRIM/*
@@ -793,7 +794,11 @@
 
     // ==================== EVENT LISTENERS ====================
 
-    // Wait for the page to fully load
-    window.addEventListener('load', initialize);
+    // Wait for the page to fully load -- supports both early and late injection scenarios
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+        initialize();
+    }
 
 })();
