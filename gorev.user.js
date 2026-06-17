@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Advanced Form Filler for gorev_add.php
 // @namespace    http://212.174.41.133/
-// @version      2.2
+// @version      2.3
 // @description  Multiselect destekli form doldurma işlemi yapar (Tam Eşleşme)
 // @match        http://212.174.41.133/gorev/gorev_add.php
 // @match        http://10.33.0.60/gorev/gorev_add.php
