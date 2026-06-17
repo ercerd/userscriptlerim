@@ -35,7 +35,7 @@
         return num.toString().padStart(2, '0');
     }
 
-    // Function to get formatted date
+    // Function to get formatted date (UTC+3 added 20 minutes forwarded)
     function getFormattedDate() {
         const currentDate = new Date();
         currentDate.setMinutes(currentDate.getMinutes() + 20);
@@ -43,7 +43,7 @@
         const day = padZero(currentDate.getDate());
         const month = padZero(currentDate.getMonth() + 1);
         const year = currentDate.getFullYear();
-        const hours = padZero(currentDate.getHours() + 3);
+        const hours = padZero(currentDate.getHours());
         const minutes = padZero(currentDate.getMinutes());
         const seconds = padZero(currentDate.getSeconds());
 
@@ -781,7 +781,7 @@
     function initialize() {
         console.log("Page fully loaded - initializing script...");
 
-        // Create buttons
+        // Create buttons (safe to run early)
         createButtons();
 
         // Auto-fill captcha
@@ -792,13 +792,26 @@
         waitForElements();
     }
 
+    // Re-apply field updates after full page load to prevent JSF framework overwrites
+    function onFullLoad() {
+        autofillCaptcha();
+        updateFields();
+    }
+
     // ==================== EVENT LISTENERS ====================
 
-    // Wait for the page to fully load -- supports both early and late injection scenarios
+    // Primary init -- supports both early and late injection scenarios
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initialize);
     } else {
         initialize();
+    }
+
+    // Secondary init -- runs after all resources loaded (JSF/PrimeFaces framework ready)
+    if (document.readyState === 'complete') {
+        setTimeout(onFullLoad, 500);
+    } else {
+        window.addEventListener('load', onFullLoad);
     }
 
 })();
