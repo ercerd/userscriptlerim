@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Advanced Form Filler for gorev_add.php
 // @namespace    http://212.174.41.133/
-// @version      2.1
+// @version      2.2
 // @description  Multiselect destekli form doldurma işlemi yapar (Tam Eşleşme)
 // @match        http://212.174.41.133/gorev/gorev_add.php
 // @match        http://10.33.0.60/gorev/gorev_add.php
@@ -117,6 +117,49 @@
             max-width: 250px;
             word-wrap: break-word;
         }
+
+        .cmd-settings-panel {
+            position: fixed;
+            top: 160px;
+            right: 10px;
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            min-width: 220px;
+        }
+        .cmd-settings-panel label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        .cmd-settings-panel select {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+            margin-bottom: 6px;
+        }
+        .cmd-settings-panel .cmd-refresh-btn {
+            padding: 5px 10px;
+            background: #2196F3;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            width: 100%;
+        }
+        .cmd-settings-panel .cmd-refresh-btn:hover {
+            background: #1976D2;
+        }
     `);
 
     // Butonları oluştur
@@ -135,6 +178,58 @@
     fontAwesome.rel = 'stylesheet';
     fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
     document.head.appendChild(fontAwesome);
+
+    // Ayarlar paneli (Göreve Giden seçimi)
+    const settingsPanel = document.createElement('div');
+    settingsPanel.className = 'cmd-settings-panel';
+    settingsPanel.innerHTML = `
+        <label for="cmd-personel-select">Göreve Giden</label>
+        <select id="cmd-personel-select"></select>
+        <button class="cmd-refresh-btn">Seçenekleri Güncelle</button>
+    `;
+    document.body.appendChild(settingsPanel);
+
+    const personelSelect = settingsPanel.querySelector('#cmd-personel-select');
+    const refreshBtn = settingsPanel.querySelector('.cmd-refresh-btn');
+
+    function populatePersonelDropdown() {
+        const source = document.getElementById('value_goreve_giden_1');
+        if (!source || source.options.length === 0) return;
+
+        const saved = localStorage.getItem('gorev_personel_adi');
+        personelSelect.innerHTML = '';
+        Array.from(source.options).forEach(opt => {
+            if (!opt.value) return;
+            const newOpt = document.createElement('option');
+            newOpt.value = opt.text;
+            newOpt.textContent = opt.text;
+            if (opt.text === saved) newOpt.selected = true;
+            personelSelect.appendChild(newOpt);
+        });
+        if (!personelSelect.value && saved) {
+            personelSelect.value = saved;
+        }
+    }
+
+    personelSelect.addEventListener('change', function () {
+        if (this.value) {
+            localStorage.setItem('gorev_personel_adi', this.value);
+            showStatusMessage('✓ Personel kaydedildi: ' + this.value);
+            setTimeout(hideStatusMessage, 2000);
+        }
+    });
+
+    refreshBtn.addEventListener('click', populatePersonelDropdown);
+
+    // Sayfa yüklenince personel listesini al
+    setTimeout(function tryPopulate() {
+        const source = document.getElementById('value_goreve_giden_1');
+        if (source && source.options.length > 1) {
+            populatePersonelDropdown();
+        } else {
+            setTimeout(tryPopulate, 500);
+        }
+    }, 1000);
 
     // Durum mesajı gösterme fonksiyonu
     function showStatusMessage(message) {
@@ -336,7 +431,8 @@
             showStatusMessage('7/9: Personel seçiliyor...');
             const goreveGidenSelect = document.getElementById('value_goreve_giden_1');
             if (goreveGidenSelect) {
-                await setChosenOption(goreveGidenSelect, 'Ercan ERDEN-Mühendis', 'Göreve Giden');
+                const personelAdi = localStorage.getItem('gorev_personel_adi') || 'Ercan ERDEN-Mühendis';
+                await setChosenOption(goreveGidenSelect, personelAdi, 'Göreve Giden');
             }
 
             // ADIM 8: Öncelik
