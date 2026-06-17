@@ -138,7 +138,8 @@
             margin-bottom: 4px;
             color: #333;
         }
-        .cmd-settings-panel select {
+        .cmd-settings-panel select,
+        .cmd-settings-panel input {
             width: 100%;
             padding: 5px;
             border: 1px solid #ccc;
@@ -146,6 +147,36 @@
             font-size: 12px;
             box-sizing: border-box;
             margin-bottom: 6px;
+        }
+        .cmd-settings-panel .autocomplete-wrap {
+            position: relative;
+        }
+        .cmd-settings-panel .autocomplete-list {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 160px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .cmd-settings-panel .autocomplete-list div {
+            padding: 4px 6px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cmd-settings-panel .autocomplete-list div:hover,
+        .cmd-settings-panel .autocomplete-list div.highlighted {
+            background: #e3f2fd;
         }
         .cmd-settings-panel .cmd-refresh-btn {
             padding: 5px 10px;
@@ -179,53 +210,92 @@
     fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
     document.head.appendChild(fontAwesome);
 
-    // Ayarlar paneli (Göreve Giden seçimi)
+    // Ayarlar paneli (Göreve Giden seçimi) - aranabilir input
     const settingsPanel = document.createElement('div');
     settingsPanel.className = 'cmd-settings-panel';
     settingsPanel.innerHTML = `
-        <label for="cmd-personel-select">Göreve Giden</label>
-        <select id="cmd-personel-select"></select>
+        <label for="cmd-personel-input">Göreve Giden</label>
+        <div class="autocomplete-wrap">
+            <input type="text" id="cmd-personel-input" placeholder="Personel ara..." autocomplete="off">
+            <div class="autocomplete-list" id="cmd-personel-list"></div>
+        </div>
         <button class="cmd-refresh-btn">Seçenekleri Güncelle</button>
     `;
     document.body.appendChild(settingsPanel);
 
-    const personelSelect = settingsPanel.querySelector('#cmd-personel-select');
+    const personelInput = settingsPanel.querySelector('#cmd-personel-input');
+    const personelList = settingsPanel.querySelector('#cmd-personel-list');
     const refreshBtn = settingsPanel.querySelector('.cmd-refresh-btn');
+    let personelOptions = [];
 
-    function populatePersonelDropdown() {
+    function populatePersonelList() {
         const source = document.getElementById('value_goreve_giden_1');
-        if (!source || source.options.length === 0) return;
+        if (!source || source.options.length === 0) return false;
 
-        const saved = localStorage.getItem('gorev_personel_adi');
-        personelSelect.innerHTML = '';
+        personelOptions = [];
         Array.from(source.options).forEach(opt => {
-            if (!opt.value) return;
-            const newOpt = document.createElement('option');
-            newOpt.value = opt.text;
-            newOpt.textContent = opt.text;
-            if (opt.text === saved) newOpt.selected = true;
-            personelSelect.appendChild(newOpt);
+            if (opt.value && opt.text.trim()) personelOptions.push(opt.text.trim());
         });
-        if (!personelSelect.value && saved) {
-            personelSelect.value = saved;
-        }
+        return true;
     }
 
-    personelSelect.addEventListener('change', function () {
-        if (this.value) {
-            localStorage.setItem('gorev_personel_adi', this.value);
-            showStatusMessage('✓ Personel kaydedildi: ' + this.value);
+    function filterAndShow(query) {
+        const q = query.toLowerCase();
+        const filtered = personelOptions.filter(t => t.toLowerCase().includes(q));
+        personelList.innerHTML = '';
+        if (filtered.length === 0) {
+            personelList.style.display = 'none';
+            return;
+        }
+        filtered.forEach(text => {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.addEventListener('click', function () {
+                personelInput.value = text;
+                localStorage.setItem('gorev_personel_adi', text);
+                personelList.style.display = 'none';
+                showStatusMessage('✓ Personel kaydedildi: ' + text);
+                setTimeout(hideStatusMessage, 2000);
+            });
+            personelList.appendChild(div);
+        });
+        personelList.style.display = 'block';
+    }
+
+    function setSavedValue() {
+        const saved = localStorage.getItem('gorev_personel_adi');
+        if (saved) personelInput.value = saved;
+    }
+
+    personelInput.addEventListener('input', function () {
+        filterAndShow(this.value);
+    });
+
+    personelInput.addEventListener('focus', function () {
+        if (this.value) filterAndShow(this.value);
+    });
+
+    personelInput.addEventListener('blur', function () {
+        setTimeout(() => { personelList.style.display = 'none'; }, 200);
+    });
+
+    personelInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') personelList.style.display = 'none';
+    });
+
+    refreshBtn.addEventListener('click', function () {
+        if (populatePersonelList()) {
+            showStatusMessage('✓ Personel listesi güncellendi (' + personelOptions.length + ' kişi)');
             setTimeout(hideStatusMessage, 2000);
         }
     });
 
-    refreshBtn.addEventListener('click', populatePersonelDropdown);
-
-    // Sayfa yüklenince personel listesini al
+    // Sayfa yüklenince personel listesini otomatik al
     setTimeout(function tryPopulate() {
         const source = document.getElementById('value_goreve_giden_1');
         if (source && source.options.length > 1) {
-            populatePersonelDropdown();
+            populatePersonelList();
+            setSavedValue();
         } else {
             setTimeout(tryPopulate, 500);
         }
