@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Önbildirim GGBS için kullanıcı betiğim
-// @version      2.231
+// @version      2.233
 // @description  All-in-one functionality: captcha autofill, form field updates, buttons for different operations, and sertifika handling
 // @author       Ercan Erden (Modified)
 // @run-at       document-end
@@ -8,8 +8,8 @@
 // @match        http://*/ONBILDIRIM/*
 // @match        https://*/ONBILDIRIM/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
-// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js  
-// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js  
+// @updateURL    https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
+// @downloadURL  https://raw.githubusercontent.com/ercerd/userscriptlerim/master/combinedonbildirim.user.js
 // ==/UserScript==
 
 /* globals jQuery, $, waitForKeyElements */
@@ -300,6 +300,57 @@
         }
     }
 
+
+
+      function copyPassword(visibleRowIndex) {
+          const visibleRows = getVisibleRows();
+
+          if (visibleRows.length <= visibleRowIndex) {
+              showToast("Şifre bulunamadı.", "error");
+              return;
+          }
+
+          const row = visibleRows[visibleRowIndex];
+
+          // Önce gizli inputtan oku
+          let password = "";
+
+          const hidden = row.querySelector('input[mo\\:name="SIFRE1"]');
+          if (hidden) {
+              password = hidden.value.trim();
+          }
+
+          // Yoksa görünen hücreden al
+          if (!password) {
+              const td = Array.from(row.querySelectorAll("td"))
+                  .find(td => td.textContent.trim() === hidden?.value);
+
+              if (td)
+                  password = td.textContent.trim();
+          }
+
+          if (!password) {
+              showToast("Şifre bulunamadı.", "error");
+              return;
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(password)
+                  .then(() => showToast("Şifre kopyalandı: " + password))
+                  .catch(() => showToast("Şifre kopyalanamadı.", "error"));
+          } else {
+              const ta = document.createElement("textarea");
+              ta.value = password;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand("copy");
+              document.body.removeChild(ta);
+
+              showToast("Şifre kopyalandı: " + password);
+          }
+      }
+
+
     // ==================== BUTTON ACTION FUNCTIONS ====================
 
     // Function to handle Ürün_Ham button click
@@ -477,6 +528,19 @@
                     numButton.style.minWidth = '30px';
                     numButton.style.fontSize = '11px';
 
+                    const passButton = document.createElement('button');
+                    passButton.className='num-copy-btn';
+                    passButton.innerText='🔑';
+                    passButton.title='Şifreyi Kopyala';
+                    passButton.style.padding='3px 6px';
+                    passButton.style.backgroundColor='#17a2b8';
+                    passButton.style.color='white';
+                    passButton.style.border='none';
+                    passButton.style.borderRadius='3px';
+                    passButton.style.cursor='pointer';
+                    passButton.style.minWidth='30px';
+                    passButton.style.fontSize='11px';
+
                     const labelSpan = document.createElement('span');
                     labelSpan.innerText = textToDisplay;
                     labelSpan.style.fontSize = '11px';
@@ -484,6 +548,7 @@
                     labelSpan.style.whiteSpace = 'nowrap';
 
                     rowContainer.appendChild(numButton);
+                    rowContainer.appendChild(passButton);
                     rowContainer.appendChild(labelSpan);
                     numberContainer.appendChild(rowContainer);
 
@@ -493,6 +558,12 @@
                         setTimeout(() => {
                             numButton.classList.remove('copied');
                         }, 1000);
+                    });
+
+                    passButton.addEventListener('click', function () {
+                        copyPassword(index);
+                        passButton.classList.add('copied');
+                        setTimeout(()=>passButton.classList.remove('copied'),1000);
                     });
                 }
             }
@@ -511,11 +582,11 @@
         const style = document.createElement('style');
         style.id = 'ggbs-panel-styles';
         style.innerHTML = `
-            #ggbs-floating-panel button, 
+            #ggbs-floating-panel button,
             #ggbs-floating-panel input {
                 transition: all 0.15s ease-in-out !important;
             }
-            #ggbs-floating-panel button:focus-visible, 
+            #ggbs-floating-panel button:focus-visible,
             #ggbs-floating-panel input:focus {
                 outline: none !important;
                 box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4) !important; /* Green focus outline */
@@ -617,10 +688,10 @@
                 row.style.alignItems = 'center';
                 row.style.gap = '8px';
                 row.style.width = '100%';
-                
+
                 btn.style.flex = '1';
                 btn.style.minWidth = '120px';
-                
+
                 row.appendChild(btn);
                 row.appendChild(createIndicator(exists));
                 return row;
@@ -732,14 +803,14 @@
         settingsContainer.style.display = 'flex';
         settingsContainer.style.flexDirection = 'column';
         settingsContainer.style.gap = '4px';
-        
+
         const settingsLabel = document.createElement('label');
         settingsLabel.innerText = 'Personel Kısaltması';
         settingsLabel.style.fontSize = '11px';
         settingsLabel.style.fontWeight = 'bold';
         settingsLabel.style.color = '#555';
         settingsLabel.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-        
+
         const settingsInput = document.createElement('input');
         settingsInput.type = 'text';
         settingsInput.value = localStorage.getItem('ggbs_personel_kisaltmasi') || 'EE';
@@ -752,12 +823,12 @@
         settingsInput.style.width = '100%';
         settingsInput.style.boxSizing = 'border-box';
         settingsInput.style.textAlign = 'center';
-        
+
         settingsInput.addEventListener('input', () => {
             localStorage.setItem('ggbs_personel_kisaltmasi', settingsInput.value.trim());
             updateFields(); // Automatically update fields in real-time
         });
-        
+
         settingsContainer.appendChild(settingsLabel);
         settingsContainer.appendChild(settingsInput);
         buttonContainer.appendChild(settingsContainer);
