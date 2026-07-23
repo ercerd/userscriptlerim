@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        karantina
 // @namespace   violentmonkey
-// @version     2.52
+// @version     2.53
 // @description Karantina BSS Uygunluk Sorgulama Sayfasına Sık Kullanılan Kapıların Sayı Başlangıçlarını Ekleme
 // @match       https://tbsapp.tarbil.gov.tr/Reports/ReportViewDynamic.aspx?report=*
 // @grant       none
@@ -30,8 +30,9 @@
         { prefix: '75-ITH1', name: 'Aktaş-Türkgözü-Ardahan:' },
         { prefix: '76-ITH2', name: 'Dilucu-Iğdır    :' },
         { prefix: '31-ITH1', name: 'Hatay           :' },
-        { prefix: '73-ITH1', name: 'Habur            :' },
-        { prefix: '79-ITH3', name: 'Kilis            :' },
+        { prefix: '73-ITH1', name: 'Habur           :' },
+        { prefix: '79-ITH2', name: 'Kilis-Öncüpınar  :' },
+        { prefix: '79-ITH3', name: 'Kilis-Çobanbey  :' },
         { prefix: '65-ITH2', name: 'Kapıköy          :' },
         { prefix: '33-IADE1', name: 'İhraç İadesi    :' },
     ];
